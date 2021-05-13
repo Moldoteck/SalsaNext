@@ -284,6 +284,7 @@ class Trainer():
                      }
             save_checkpoint(state, self.log, suffix="")
 
+            print("Before save train")
             if self.info['train_iou'] > self.info['best_train_iou']:
                 print("Best mean iou in training set so far, save model!")
                 self.info['best_train_iou'] = self.info['train_iou']
@@ -294,6 +295,8 @@ class Trainer():
                          }
                 save_checkpoint(state, self.log, suffix="_train_best")
 
+
+            print("Before report validation")
             if epoch % self.ARCH["train"]["report_epoch"] == 0:
                 # evaluate on validation set
                 print("*" * 80)
@@ -311,6 +314,7 @@ class Trainer():
                 self.info["valid_iou"] = iou
                 self.info['valid_heteros'] = hetero_l
 
+            print("Before valid save")
             # remember best iou and save checkpoint
             if self.info['valid_iou'] > self.info['best_val_iou']:
                 print("Best mean iou in validation so far, save model!")
@@ -326,6 +330,7 @@ class Trainer():
                 save_checkpoint(state, self.log, suffix="_valid_best")
 
             print("*" * 80)
+            print("Before save log")
 
             # save to log
             Trainer.save_to_log(logdir=self.log,
