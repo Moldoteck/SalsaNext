@@ -2,6 +2,7 @@ name: salsanext
 channels:
   - defaults
 dependencies:
+  - python=3.8
   - _libgcc_mutex
   - _tflow_select
   - blas
