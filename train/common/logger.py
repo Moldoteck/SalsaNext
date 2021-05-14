@@ -20,6 +20,7 @@ class Logger(object):
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
         with self.writer.as_default():
+            print(value)
             tf.summary.scalar(tag, value.cpu(), step)
         self.writer.flush()
         # summary = tf.Summary(
