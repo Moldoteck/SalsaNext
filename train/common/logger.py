@@ -21,7 +21,10 @@ class Logger(object):
         """Log a scalar variable."""
         with self.writer.as_default():
             print(value)
-            tf.summary.scalar(tag, value.cpu(), step)
+            if isinstance(value, np.floating):
+                tf.summary.scalar(tag, value, step)
+            else:
+                tf.summary.scalar(tag, value.cpu(), step)
         self.writer.flush()
         # summary = tf.Summary(
         #     value=[tf.Summary.Value(tag=tag, simple_value=value)])
