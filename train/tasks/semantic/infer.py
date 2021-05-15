@@ -46,13 +46,6 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--uncertainty', '-u',
-        type=str2bool, nargs='?',
-        const=True, default=False,
-        help='Set this if you want to use the Uncertainty Version'
-    )
-
-    parser.add_argument(
         '--monte-carlo', '-c',
         type=int, default=30,
         help='Number of samplings per scan'
@@ -75,7 +68,6 @@ if __name__ == '__main__':
     print("dataset", FLAGS.dataset)
     print("log", FLAGS.log)
     print("model", FLAGS.model)
-    print("Uncertainty", FLAGS.uncertainty)
     print("Monte Carlo Sampling", FLAGS.monte_carlo)
     print("infering", FLAGS.split)
     print("----------\n")
@@ -140,5 +132,5 @@ if __name__ == '__main__':
         quit()
 
     # create user and infer dataset
-    user = User(ARCH, DATA, FLAGS.dataset, FLAGS.log, FLAGS.model,FLAGS.split,FLAGS.uncertainty,FLAGS.monte_carlo)
+    user = User(ARCH, DATA, FLAGS.dataset, FLAGS.log, FLAGS.model,FLAGS.split,FLAGS.monte_carlo)
     user.infer()

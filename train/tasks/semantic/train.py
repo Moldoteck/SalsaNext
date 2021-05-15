@@ -84,28 +84,18 @@ if __name__ == '__main__':
         default=None,
         help='Directory to get the pretrained model. If not passed, do from scratch!'
     )
-    parser.add_argument(
-        '--uncertainty', '-u',
-        type=str2bool, nargs='?',
-        const=True, default=False,
-        help='Set this if you want to use the Uncertainty Version'
-    )
 
     FLAGS, unparsed = parser.parse_known_args()
     FLAGS.log = FLAGS.log + '/logs/' + datetime.datetime.now().strftime("%Y-%-m-%d-%H:%M") + FLAGS.name
-    if FLAGS.uncertainty:
-        params = SalsaNextUncertainty(20)
-        pytorch_total_params = sum(p.numel() for p in params.parameters() if p.requires_grad)
-    else:
-        params = SalsaNext(20)
-        pytorch_total_params = sum(p.numel() for p in params.parameters() if p.requires_grad)
+
+    params = SalsaNext(20)
+    pytorch_total_params = sum(p.numel() for p in params.parameters() if p.requires_grad)
     # print summary of what we will do
     print("----------")
     print("INTERFACE:")
     print("dataset", FLAGS.dataset)
     print("arch_cfg", FLAGS.arch_cfg)
     print("data_cfg", FLAGS.data_cfg)
-    print("uncertainty", FLAGS.uncertainty)
     print("Total of Trainable Parameters: {}".format(millify(pytorch_total_params,2)))
     print("log", FLAGS.log)
     print("pretrained", FLAGS.pretrained)
@@ -173,5 +163,5 @@ if __name__ == '__main__':
         quit()
 
     # create trainer and start the training
-    trainer = Trainer(ARCH, DATA, FLAGS.dataset, FLAGS.log, FLAGS.pretrained,FLAGS.uncertainty)
+    trainer = Trainer(ARCH, DATA, FLAGS.dataset, FLAGS.log, FLAGS.pretrained)
     trainer.train()
