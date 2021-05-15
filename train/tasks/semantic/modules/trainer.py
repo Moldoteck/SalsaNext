@@ -255,10 +255,10 @@ class Trainer():
             acc, iou, loss, update_mean,hetero_l = self.train_epoch(train_loader=self.parser.get_train_set(),
                                                            model=self.model,
                                                            criterion=self.criterion,
-                                                           optimizer=self.optimizer,
+                                                           optimizer=None,
                                                            epoch=epoch,
                                                            evaluator=self.evaluator,
-                                                           scheduler=self.scheduler,
+                                                           scheduler=None,
                                                            color_fn=self.parser.to_color,
                                                            report=self.ARCH["train"]["report_batch"],
                                                            show_scans=self.ARCH["train"]["show_scans"])
