@@ -107,7 +107,6 @@ class Trainer():
                                           shuffle_train=True)
 
         # weights for loss (and bias)
-
         epsilon_w = self.ARCH["train"]["epsilon_w"]
         content = torch.zeros(self.parser.get_n_classes(), dtype=torch.float)
         for cl, freq in DATA["content"].items():
@@ -140,10 +139,13 @@ class Trainer():
         self.ls = Lovasz_softmax(ignore=0).to(self.device)
         self.SoftmaxHeteroscedasticLoss = SoftmaxHeteroscedasticLoss().to(self.device)
         # loss as dataparallel too (more images in batch)
-        self.optimizer = optim.SGD([{'params': self.model.parameters()}],
-                                   lr=self.ARCH["train"]["lr"],
-                                   momentum=self.ARCH["train"]["momentum"],
-                                   weight_decay=self.ARCH["train"]["w_decay"])
+        # self.optimizer = optim.SGD([{'params': self.model.parameters()}],
+        #                            lr=self.ARCH["train"]["lr"],
+        #                            momentum=self.ARCH["train"]["momentum"],
+        #                            weight_decay=self.ARCH["train"]["w_decay"])
+        self.optimizer = optim.Adam([{'params': self.model.parameters()}],
+                                        lr=self.ARCH["train"]["lr"],
+                                        weight_decay=self.ARCH["train"]["w_decay"])
 
         # Use warmup learning rate
         # post decay and step sizes come in epochs and we want it in steps
@@ -153,9 +155,8 @@ class Trainer():
         self.scheduler = warmupLR(optimizer=self.optimizer,
                                   lr=self.ARCH["train"]["lr"],
                                   warmup_steps=up_steps,
-                                  momentum=self.ARCH["train"]["momentum"],
                                   decay=final_decay)
-        self.model, _, _, _ = deepspeed.initialize(model=self.model,
+        self.model, self.optimizer, _, self.scheduler = deepspeed.initialize(model=self.model,
                                                      optimizer=self.optimizer,
                                                      lr_scheduler=self.scheduler, config='./modules/ds_config.json')
         if self.path is not None:
@@ -361,6 +362,8 @@ class Trainer():
             optimizer.zero_grad()
             model.backward(loss_m)
             # loss_m.backward()
+            # step scheduler
+            scheduler.step()
             optimizer.step()
 
             # measure accuracy and record loss
@@ -421,8 +424,6 @@ class Trainer():
                     data_time=self.data_time_t, loss=losses, acc=acc, iou=iou, lr=lr,
                     umean=update_mean, ustd=update_std, estim=self.calculate_estimate(epoch, i)))
 
-            # step scheduler
-            scheduler.step()
 
         return acc.avg, iou.avg, losses.avg, update_ratio_meter.avg,hetero_l.avg
 

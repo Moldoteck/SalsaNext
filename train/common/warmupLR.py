@@ -8,14 +8,14 @@ class warmupLR(toptim._LRScheduler):
         Initially, increases the learning rate from 0 to the final value, in a
         certain number of steps. After this number of steps, each step decreases
         LR exponentially.
+        Now should work with adam
     """
 
-    def __init__(self, optimizer, lr, warmup_steps, momentum, decay):
+    def __init__(self, optimizer, lr, warmup_steps, decay):
         # cyclic params
         self.optimizer = optimizer
         self.lr = lr
         self.warmup_steps = warmup_steps
-        self.momentum = momentum
         self.decay = decay
 
         # cap to one
@@ -28,9 +28,7 @@ class warmupLR(toptim._LRScheduler):
                                                  max_lr=self.lr,
                                                  step_size_up=self.warmup_steps,
                                                  step_size_down=self.warmup_steps,
-                                                 cycle_momentum=False,
-                                                 base_momentum=self.momentum,
-                                                 max_momentum=self.momentum)
+                                                 cycle_momentum=False)
 
         # our params
         self.last_epoch = -1  # fix for pytorch 1.1 and below
