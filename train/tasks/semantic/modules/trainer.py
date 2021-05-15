@@ -393,7 +393,7 @@ class Trainer():
             # get gradient updates and weights, so I can print the relationship of
             # their norms
             update_ratios = []
-            for g in self.optimizer.param_groups:
+            for g in self.model.param_groups:
                 lr = g["lr"]
                 for value in g["params"]:
                     if value.grad is not None:
