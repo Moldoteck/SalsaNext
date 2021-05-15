@@ -175,7 +175,7 @@ class Trainer():
                                   warmup_steps=up_steps,
                                   momentum=self.ARCH["train"]["momentum"],
                                   decay=final_decay)
-        self.model, self.optimizer, _, self.scheduler = deepspeed.initialize(model=self.model,
+        self.model, _, _, _ = deepspeed.initialize(model=self.model,
                                                      optimizer=self.optimizer,
                                                      lr_scheduler=self.scheduler, config='./modules/ds_config.json')
         if self.path is not None:
