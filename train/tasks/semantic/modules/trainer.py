@@ -175,9 +175,9 @@ class Trainer():
                                   warmup_steps=up_steps,
                                   momentum=self.ARCH["train"]["momentum"],
                                   decay=final_decay)
-        self.model, self.model, self.train_dataloader, self.scheduler = deepspeed.initialize(model=self.model,
+        self.model, self.model, _, self.scheduler = deepspeed.initialize(model=self.model,
                                                      optimizer=self.optimizer,
-                                                     lr_scheduler=self.scheduler,training_data=self.parser.get_train_set(), config='./modules/ds_config.json')
+                                                     lr_scheduler=self.scheduler, config='./modules/ds_config.json')
         if self.path is not None:
             torch.nn.Module.dump_patches = True
             w_dict = torch.load(path + "/SalsaNext",
@@ -262,7 +262,7 @@ class Trainer():
         for epoch in range(self.epoch, self.ARCH["train"]["max_epochs"]):
 
             # train for 1 epoch
-            acc, iou, loss, update_mean,hetero_l = self.train_epoch(train_loader=self.train_dataloader,
+            acc, iou, loss, update_mean,hetero_l = self.train_epoch(train_loader=self.parser.get_train_set(),
                                                            model=self.model,
                                                            criterion=self.criterion,
                                                            optimizer=self.optimizer,
