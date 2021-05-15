@@ -165,8 +165,8 @@ class Trainer():
         steps_per_epoch = self.parser.get_train_size()
         up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
         # final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
-        print(self.model.scheduler)
-        self.model.scheduler.warmup_num_steps =max(2, up_steps)
+        print(self.model)
+        # self.model.scheduler.warmup_num_steps =max(2, up_steps)
         if self.path is not None:
             torch.nn.Module.dump_patches = True
             w_dict = self.model.load_checkpoint(path, load_optimizer_states=True, load_lr_scheduler_states=True)
