@@ -175,7 +175,7 @@ class Trainer():
                                   warmup_steps=up_steps,
                                   momentum=self.ARCH["train"]["momentum"],
                                   decay=final_decay)
-        self.model, self.model, self.train_dataloader, self.scheduler = deepspeed.initialize(args={'train_batch_size': 7},model=self.model,
+        self.model, self.model, self.train_dataloader, self.scheduler = deepspeed.initialize(model=self.model,
                                                      optimizer=self.optimizer,
                                                      lr_scheduler=self.scheduler,training_data=self.parser.get_train_set(), config='./modules/ds_config.json')
         if self.path is not None:
