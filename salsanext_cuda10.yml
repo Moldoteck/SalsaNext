@@ -1,8 +1,9 @@
 name: salsanext
 channels:
-  - defaults
-  - conda-forge
   - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
 dependencies:
   - python=3.8
   - pytorch==1.7.1
