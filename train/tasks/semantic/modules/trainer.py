@@ -160,7 +160,7 @@ class Trainer():
         #                           decay=final_decay)
     
         # self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam(self.model.parameters(), lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
-        self.model = deepspeed.initialize(model=self.model, model_parameters=self.model.parameters(), config='./modules/ds_config.json')
+        self.model,_,_,_ = deepspeed.initialize(model=self.model, model_parameters=self.model.parameters(), config='./modules/ds_config.json')
         # deepspeed.checkpointing.configure(deepspeed_config='./modules/ds_config.json')
         steps_per_epoch = self.parser.get_train_size()
         up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
