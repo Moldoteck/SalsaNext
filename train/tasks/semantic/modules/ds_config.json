@@ -1,5 +1,5 @@
 {
-    "gradient_accumulation_steps":8,
+    "gradient_accumulation_steps":1,
     "train_micro_batch_size_per_gpu":7,
     "zero_allow_untested_optimizer": true,
     "zero_optimization": {
