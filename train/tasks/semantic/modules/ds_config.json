@@ -3,7 +3,6 @@
     "train_micro_batch_size_per_gpu": 7,
     "zero_optimization": {
         "stage": 3,
-        "cpu_offload": true,
         "reduce_bucket_size": 1e8,
         "allgather_bucket_size": 1e8,
         "contiguous_gradients": true,
