@@ -131,7 +131,7 @@ def flatten_probas(probas, labels, ignore=None):
     if ignore is None:
         return probas, labels
     valid = (labels != ignore)
-    vprobas = probas[valid.nonzero(as_tuple=True).squeeze()]
+    vprobas = probas[valid.nonzero(as_tuple=False).squeeze()]
     vlabels = labels[valid]
     return vprobas, vlabels
 
