@@ -59,6 +59,7 @@ def save_checkpoint(to_save, logdir, suffix=""):
     # Save the weights
     torch.save(to_save, logdir +
                "/SalsaNext" + suffix)
+     
 
 
 class Trainer():
@@ -161,12 +162,13 @@ class Trainer():
                                                      lr_scheduler=self.scheduler, config='./modules/ds_config.json')
         if self.path is not None:
             torch.nn.Module.dump_patches = True
-            w_dict = torch.load(path + "/SalsaNext",
-                                map_location=lambda storage, loc: storage)
-            self.model.load_state_dict(w_dict['state_dict'], strict=True)
-            self.optimizer.load_state_dict(w_dict['optimizer'])
+            w_dict = self.self.model.load_checkpoint(path + "/SalsaNext", load_optimizer_states=True, load_lr_scheduler_states=True)
+            # w_dict = torch.load(path + "/SalsaNext",
+            #                     map_location=lambda storage, loc: storage)
+            # self.model.load_state_dict(w_dict['state_dict'], strict=True)
+            # self.optimizer.load_state_dict(w_dict['optimizer'])
             self.epoch = w_dict['epoch'] + 1
-            self.scheduler.load_state_dict(w_dict['scheduler'])
+            # self.scheduler.load_state_dict(w_dict['scheduler'])
             print("dict epoch:", w_dict['epoch'])
             self.info = w_dict['info']
             print("info", w_dict['info'])
@@ -262,23 +264,21 @@ class Trainer():
             self.info["train_hetero"] = hetero_l
 
             # remember best iou and save checkpoint
-            state = {'epoch': epoch, 'state_dict': self.model.state_dict(),
-                     'optimizer': self.optimizer.state_dict(),
-                     'info': self.info,
-                     'scheduler': self.scheduler.state_dict()
+            state = {'epoch': epoch,
+                     'info': self.info
                      }
-            save_checkpoint(state, self.log, suffix="")
+            # save_checkpoint(state, self.log, suffix="")
+            self.model.save_checkpoint(self.log, "", client_state = state)
 
             print("Before save train")
             if self.info['train_iou'] > self.info['best_train_iou']:
                 print("Best mean iou in training set so far, save model!")
                 self.info['best_train_iou'] = self.info['train_iou']
-                state = {'epoch': epoch, 'state_dict': self.model.state_dict(),
-                         'optimizer': self.optimizer.state_dict(),
-                         'info': self.info,
-                         'scheduler': self.scheduler.state_dict()
+                state = {'epoch': epoch,
+                         'info': self.info
                          }
-                save_checkpoint(state, self.log, suffix="_train_best")
+                # save_checkpoint(state, self.log, suffix="_train_best")
+                self.model.save_checkpoint(self.log, "_train_best", client_state = state)
 
 
             print("Before report validation")
@@ -307,12 +307,11 @@ class Trainer():
                 self.info['best_val_iou'] = self.info['valid_iou']
 
                 # save the weights!
-                state = {'epoch': epoch, 'state_dict': self.model.state_dict(),
-                         'optimizer': self.optimizer.state_dict(),
-                         'info': self.info,
-                         'scheduler': self.scheduler.state_dict()
+                state = {'epoch': epoch,
+                         'info': self.info
                          }
-                save_checkpoint(state, self.log, suffix="_valid_best")
+                # save_checkpoint(state, self.log, suffix="_valid_best")
+                self.model.save_checkpoint(self.log, "_valid_best", client_state = state)
 
             print("*" * 80)
             print("Before save log")
@@ -361,10 +360,11 @@ class Trainer():
 
             optimizer.zero_grad()
             model.backward(loss_m)
+            model.step()
             # loss_m.backward()
             # step scheduler
-            scheduler.step()
-            optimizer.step()
+            # scheduler.step()
+            # optimizer.step()
 
             # measure accuracy and record loss
             loss = loss_m.mean()
