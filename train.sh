@@ -19,7 +19,6 @@ do
       n ) n="$OPTARG" ;;
       c ) c="$OPTARG" ;;
       p ) p="$OPTARG" ;;
-      u ) u="$OPTARG" ;;
       ? ) helpFunction ;;
    esac
 done
@@ -29,9 +28,7 @@ then
    echo "Some or all of the parameters are empty";
    helpFunction
 fi
-if [ -z "$u" ]
-then u='false'
-fi
+
 d=$(get_abs_filename "$d")
 a=$(get_abs_filename "$a")
 l=$(get_abs_filename "$l")
@@ -42,4 +39,4 @@ else
   p=$(get_abs_filename "$p")
 fi
 export CUDA_VISIBLE_DEVICES="$c"
-cd ./train/tasks/semantic;  ./train.py -d "$d"  -ac "$a" -l "$l" -n "$n" -p "$p" -u "$u"
+cd ./train/tasks/semantic;  ./train.py -d "$d"  -ac "$a" -l "$l" -n "$n" -p "$p"

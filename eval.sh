@@ -18,7 +18,6 @@ do
       s ) s="$OPTARG" ;;
       n ) n="$OPTARG"  ;;
       g ) g="$OPTARG" ;;
-      u ) u="$OPTARG" ;;
       c ) c="$OPTARG" ;;
       ? ) helpFunction ;;
    esac
@@ -29,13 +28,11 @@ then
    echo "Some or all of the options are empty";
    helpFunction
 fi
-if [ -z "$u" ]
-then u='false'
-fi
+
 d=$(get_abs_filename "$d")
 p=$(get_abs_filename "$p")
 m=$(get_abs_filename "$m")
 export CUDA_VISIBLE_DEVICES="$g"
-cd ./train/tasks/semantic/; ./infer.py -d "$d" -l "$p" -m "$m" -n "$n" -s "$s" -u "$u" -c "$c"
+cd ./train/tasks/semantic/; ./infer.py -d "$d" -l "$p" -m "$m" -n "$n" -s "$s" -c "$c"
 echo "finishing infering.\n Starting evaluating"
 ./evaluate_iou.py -d "$d" -p "$p" --split "$s" -m "$m"
