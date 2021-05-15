@@ -363,7 +363,7 @@ class Trainer():
             torch.cuda.empty_cache()
 
         # switch to train mode
-        model.train()
+        # model.train()
 
         end = time.time()
         for i, (in_vol, proj_mask, proj_labels, _, path_seq, path_name, _, _, _, _, _, _, _, _, _) in enumerate(train_loader):
