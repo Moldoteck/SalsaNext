@@ -177,7 +177,7 @@ class Trainer():
                                   decay=final_decay)
         self.model, self.model, _, self.scheduler = deepspeed.initialize(model=self.model,
                                                      optimizer=self.optimizer,
-                                                     lr_scheduler=self.scheduler, data_parallel=self.da,config='./ds_config.json')
+                                                     lr_scheduler=self.scheduler,config='./ds_config.json')
         if self.path is not None:
             torch.nn.Module.dump_patches = True
             w_dict = torch.load(path + "/SalsaNext",
