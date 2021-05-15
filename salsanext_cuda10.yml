@@ -10,7 +10,7 @@ dependencies:
   - ca-certificates
   - certifi
   - cffi
-  - cudnn=7.6.0=cuda10.1_0
+  - cudnn=8.1.0.77=cuda11.0_0
   - gast
   - google-pasta
   - hdf5
