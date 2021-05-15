@@ -20,6 +20,7 @@ dependencies:
   - certifi
   - cffi
   - cudnn=8.0.4=cuda11.0_0
+  - ipykernel
   - gast
   - google-pasta
   - hdf5
