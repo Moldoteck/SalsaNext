@@ -19,7 +19,7 @@
         "profile": false
     },
     "optimizer": {
-        "type": "deepspeed_adam",
+        "type": "Adam",
         "params": {
             "adam_w_mode": true,
             "lr": 0.01,
