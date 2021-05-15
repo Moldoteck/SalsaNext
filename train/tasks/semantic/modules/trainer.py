@@ -22,6 +22,7 @@ from tasks.semantic.modules.ioueval import *
 from tasks.semantic.modules.SalsaNext import *
 from tasks.semantic.modules.Lovasz_Softmax import Lovasz_softmax
 import tasks.semantic.modules.adf as adf
+import mpu
 
 def keep_variance_fn(x):
     return x + 1e-3
@@ -144,25 +145,29 @@ class Trainer():
         #                            lr=self.ARCH["train"]["lr"],
         #                            momentum=self.ARCH["train"]["momentum"],
         #                            weight_decay=self.ARCH["train"]["w_decay"])
-        self.optimizer = optim.Adam([{'params': self.model.parameters()}],
-                                        lr=self.ARCH["train"]["lr"],
-                                        weight_decay=self.ARCH["train"]["w_decay"])
+        # self.optimizer = optim.Adam([{'params': self.model.parameters()}],
+        #                                 lr=self.ARCH["train"]["lr"],
+        #                                 weight_decay=self.ARCH["train"]["w_decay"])
 
         # Use warmup learning rate
         # post decay and step sizes come in epochs and we want it in steps
+        # steps_per_epoch = self.parser.get_train_size()
+        # up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
+        # final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
+        # self.scheduler = warmupLR(optimizer=self.optimizer,
+        #                           lr=self.ARCH["train"]["lr"],
+        #                           warmup_steps=up_steps,
+        #                           decay=final_decay)
+        self.model, _, _, _ = deepspeed.initialize(model=self.model, config='./modules/ds_config.json')
+        # deepspeed.checkpointing.configure(deepspeed_config='./modules/ds_config.json')
         steps_per_epoch = self.parser.get_train_size()
         up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
-        final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
-        self.scheduler = warmupLR(optimizer=self.optimizer,
-                                  lr=self.ARCH["train"]["lr"],
-                                  warmup_steps=up_steps,
-                                  decay=final_decay)
-        self.model, self.optimizer, _, self.scheduler = deepspeed.initialize(model=self.model,
-                                                     optimizer=self.optimizer,
-                                                     lr_scheduler=self.scheduler, config='./modules/ds_config.json')
+        # final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
+        print(self.model.scheduler)
+        self.model.scheduler.warmup_num_steps =max(2, up_steps)
         if self.path is not None:
             torch.nn.Module.dump_patches = True
-            w_dict = self.self.model.load_checkpoint(path + "/SalsaNext", load_optimizer_states=True, load_lr_scheduler_states=True)
+            w_dict = self.model.load_checkpoint(path, load_optimizer_states=True, load_lr_scheduler_states=True)
             # w_dict = torch.load(path + "/SalsaNext",
             #                     map_location=lambda storage, loc: storage)
             # self.model.load_state_dict(w_dict['state_dict'], strict=True)
@@ -358,7 +363,7 @@ class Trainer():
             output = model(in_vol)
             loss_m = criterion(torch.log(output.clamp(min=1e-8)), proj_labels.long()) + self.ls(output, proj_labels.long())
 
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             model.backward(loss_m)
             model.step()
             # loss_m.backward()
