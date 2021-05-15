@@ -4,6 +4,7 @@
     "zero_optimization": {
         "stage": 2,
         "cpu_offload": true,
+        "reduce_bucket_size": 2e8,
         "contiguous_gradients": true,
         "overlap_comm": true
     }
