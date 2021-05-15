@@ -22,7 +22,6 @@ from tasks.semantic.modules.ioueval import *
 from tasks.semantic.modules.SalsaNext import *
 from tasks.semantic.modules.Lovasz_Softmax import Lovasz_softmax
 import tasks.semantic.modules.adf as adf
-import mpu
 
 def keep_variance_fn(x):
     return x + 1e-3
