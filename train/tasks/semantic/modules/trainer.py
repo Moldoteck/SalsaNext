@@ -393,7 +393,8 @@ class Trainer():
                 idx = torch.ones(self.n_gpus).cuda()
                 loss_m.backward(idx)
             else:
-                loss_m.backward()
+                model.backward(loss_m)
+                # loss_m.backward()
             optimizer.step()
 
             # measure accuracy and record loss
