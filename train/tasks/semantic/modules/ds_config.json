@@ -1,6 +1,7 @@
 {
     "train_batch_size":7,
     "zero_allow_untested_optimizer": true,
+    "fp16":{"enabled":false},
     "zero_optimization": {
         "stage": 2,
         "cpu_offload": true,
