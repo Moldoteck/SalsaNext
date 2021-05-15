@@ -392,15 +392,15 @@ class Trainer():
 
             # get gradient updates and weights, so I can print the relationship of
             # their norms
-            update_ratios = []
-            for g in self.model.param_groups:
-                lr = g["lr"]
-                for value in g["params"]:
-                    if value.grad is not None:
-                        w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))
-                        update = np.linalg.norm(-max(lr, 1e-10) *
-                                                value.grad.cpu().numpy().reshape((-1)))
-                        update_ratios.append(update / max(w, 1e-10))
+            update_ratios = [1]
+            # for g in self.model.param_groups:
+            #     lr = g["lr"]
+            #     for value in g["params"]:
+            #         if value.grad is not None:
+            #             w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))
+            #             update = np.linalg.norm(-max(lr, 1e-10) *
+            #                                     value.grad.cpu().numpy().reshape((-1)))
+            #             update_ratios.append(update / max(w, 1e-10))
             update_ratios = np.array(update_ratios)
             update_mean = update_ratios.mean()
             update_std = update_ratios.std()
