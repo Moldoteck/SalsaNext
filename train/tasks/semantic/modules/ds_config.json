@@ -5,7 +5,7 @@
     "zero_optimization": {
         "stage": 2,
         "cpu_offload": true,
-        "contiguous_gradients": true,
+        "contiguous_gradients": false,
         "overlap_comm": true
     }
 }
