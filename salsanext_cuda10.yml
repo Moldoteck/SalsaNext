@@ -10,7 +10,6 @@ dependencies:
   - torchaudio==0.7.2
   - cudatoolkit=11.0
   - tensorboard
-  - deepspeed
   - mpi4py
   - _libgcc_mutex
   - _tflow_select
@@ -52,6 +51,7 @@ dependencies:
   - xz
   - zlib
   - pip:
+    - deepspeed
     - absl-py
     - pyreadline
     - astor
