@@ -8,6 +8,8 @@ import cv2
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
+import deepspeed
+from torch.nn.parallel.data_parallel import data_parallel
 
 import torch.optim as optim
 from matplotlib import pyplot as plt
@@ -173,7 +175,9 @@ class Trainer():
                                   warmup_steps=up_steps,
                                   momentum=self.ARCH["train"]["momentum"],
                                   decay=final_decay)
-
+        self.model, self.model, _, self.scheduler = deepspeed.initialize(model=self.model,
+                                                     optimizer=self.optimizer,
+                                                     lr_scheduler=self.scheduler, data_parallel=self.da,config='./ds_config.json')
         if self.path is not None:
             torch.nn.Module.dump_patches = True
             w_dict = torch.load(path + "/SalsaNext",
