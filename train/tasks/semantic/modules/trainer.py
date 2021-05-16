@@ -160,10 +160,16 @@ class Trainer():
         #                           decay=final_decay)
     
         # self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam(self.model.parameters(), lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
-        self.model,_,_,_ = deepspeed.initialize(model=self.model, model_parameters=self.model.parameters(), config='./modules/ds_config.json')
-        # deepspeed.checkpointing.configure(deepspeed_config='./modules/ds_config.json')
+
+        self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam(self.model.parameters(), lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
+        
         steps_per_epoch = self.parser.get_train_size()
         up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
+        self.scheduler = deepspeed.runtime.lr_schedules.WarmupDecayLR(optimizer= self.optimizer, total_num_steps = self.ARCH["train"]["max_epochs"], warmup_min_lr = 0.0, warmup_max_lr = 0.01, warmup_num_steps = up_steps, last_batch_iteration = -1)
+        
+        self.model, self.optimizer,_,self.scheduler = deepspeed.initialize(model=self.model, optimizer=self.optimizer,lr_scheduler=self.scheduler,model_parameters=self.model.parameters(), config='./modules/ds_config.json')
+        # deepspeed.checkpointing.configure(deepspeed_config='./modules/ds_config.json')
+  
         # final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
         print(self.model)
         # self.model.scheduler.warmup_num_steps =max(2, up_steps)
@@ -394,14 +400,14 @@ class Trainer():
             # their norms
             update_ratios = [1]
             lr=0.0
-            # for g in self.model.param_groups:
-            #     lr = g["lr"]
-            #     for value in g["params"]:
-            #         if value.grad is not None:
-            #             w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))
-            #             update = np.linalg.norm(-max(lr, 1e-10) *
-            #                                     value.grad.cpu().numpy().reshape((-1)))
-            #             update_ratios.append(update / max(w, 1e-10))
+            for g in self.optimizer.param_groups:
+                lr = g["lr"]
+                for value in g["params"]:
+                    if value.grad is not None:
+                        w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))
+                        update = np.linalg.norm(-max(lr, 1e-10) *
+                                                value.grad.cpu().numpy().reshape((-1)))
+                        update_ratios.append(update / max(w, 1e-10))
             update_ratios = np.array(update_ratios)
             update_mean = update_ratios.mean()
             update_std = update_ratios.std()
