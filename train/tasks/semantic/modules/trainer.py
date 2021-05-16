@@ -398,8 +398,7 @@ class Trainer():
 
             # get gradient updates and weights, so I can print the relationship of
             # their norms
-            update_ratios = [1]
-            lr=0.0
+            update_ratios = []
             for g in self.optimizer.param_groups:
                 lr = g["lr"]
                 for value in g["params"]:
