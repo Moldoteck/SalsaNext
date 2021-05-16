@@ -230,4 +230,27 @@ class SalsaNext(nn.Module):
         #         hidden_states = checkpoint(custom(l, l+chunk_length),
         #                                    hidden_states, attention_mask)
         #         l += chunk_length
+        # def custom(start, end):
+        #     def custom_forward(*inputs):
+        #         layers_ = self.layers[start:end]
+        #         x_ = inputs[0]
+        #         for layer in layers_:
+        #             x_ = layer(x_, inputs[1])
+        #         return x_
+        #     return custom_forward
+
+        # if self.checkpoint_activations:
+        #     l = 0
+        #     num_layers = len(self.layers)
+        #     chunk_length = self.checkpoint_num_layers
+        #     while l < num_layers:
+        #         hidden_states = checkpoint(custom(l, l+chunk_length),
+        #                                    hidden_states, attention_mask)
+        #         l += chunk_length
+        # else:
+        #     for layer in self.layers:
+        #         hidden_states = layer(hidden_states, attention_mask)
+
+        # # Final layer norm.
+        # output = self.final_layernorm(hidden_states)
         return logits
