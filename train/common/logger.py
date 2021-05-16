@@ -20,7 +20,6 @@ class Logger(object):
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
         with self.writer.as_default():
-            print(value)
             if isinstance(value, (np.floating,float, int)):
                 tf.summary.scalar(tag, value, step)
             else:
