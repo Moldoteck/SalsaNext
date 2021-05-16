@@ -1,11 +1,11 @@
 {
-    "gradient_accumulation_steps": 2,
-    "train_micro_batch_size_per_gpu": 14,
+    "gradient_accumulation_steps": 3,
+    "train_micro_batch_size_per_gpu": 24,
     "gradient_clipping": 1.0,
     "zero_optimization": {
         "stage": 3,
-        "reduce_bucket_size": 2e8,
-        "allgather_bucket_size": 2e8,
+        "reduce_bucket_size": 4e8,
+        "allgather_bucket_size": 4e8,
         "stage3_max_live_parameters": 1e9,
         "stage3_max_reuse_distance": 1e9,
         "stage3_prefetch_bucket_size": 5e8,
