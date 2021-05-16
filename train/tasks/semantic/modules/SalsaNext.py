@@ -7,6 +7,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import deepspeed
+
+
 class ResContextBlock(nn.Module):
     def __init__(self, in_filters, out_filters):
         super(ResContextBlock, self).__init__()
@@ -192,65 +195,70 @@ class SalsaNext(nn.Module):
 
         self.logits = nn.Conv2d(32, nclasses, kernel_size=(1, 1))
 
+        self.layers = [self.downCntx, self.downCntx2, self.downCntx3, 
+        self.resBlock1,self.resBlock2,self.resBlock3, self.resBlock4, self.resBlock5,
+        self.upBlock1, self.upBlock2, self.upBlock3, self.upBlock4]
+
+        global get_cuda_rng_tracker, checkpoint
+        get_cuda_rng_tracker = deepspeed.checkpointing.get_cuda_rng_tracker
+        checkpoint = deepspeed.checkpointing.checkpoint
+
     def forward(self, x):
-        downCntx = self.downCntx(x)
-        downCntx = self.downCntx2(downCntx)
-        downCntx = self.downCntx3(downCntx)
+        # downCntx = self.downCntx(x)
+        # downCntx = self.downCntx2(downCntx)
+        # downCntx = self.downCntx3(downCntx)
 
-        down0c, down0b = self.resBlock1(downCntx)
-        down1c, down1b = self.resBlock2(down0c)
-        down2c, down2b = self.resBlock3(down1c)
-        down3c, down3b = self.resBlock4(down2c)
-        down5c = self.resBlock5(down3c)
+        # down0c, down0b = self.resBlock1(downCntx)
+        # down1c, down1b = self.resBlock2(down0c)
+        # down2c, down2b = self.resBlock3(down1c)
+        # down3c, down3b = self.resBlock4(down2c)
+        # down5c = self.resBlock5(down3c)
 
-        up4e = self.upBlock1(down5c,down3b)
-        up3e = self.upBlock2(up4e, down2b)
-        up2e = self.upBlock3(up3e, down1b)
-        up1e = self.upBlock4(up2e, down0b)
-        logits = self.logits(up1e)
+        # up4e = self.upBlock1(down5c,down3b)
+        # up3e = self.upBlock2(up4e, down2b)
+        # up2e = self.upBlock3(up3e, down1b)
+        # up1e = self.upBlock4(up2e, down0b)
+        # logits = self.logits(up1e)
+
+        # logits = logits
+        # logits = F.softmax(logits, dim=1)
+
+
+        def custom(start, end):
+            def custom_forward(*inputs):
+                x_ = inputs[0]
+                y_array = inputs[1]#initial 0 length
+                for ind, layer in enumerate(self.layers):
+                    if start<=ind<end:
+                        if ind<3:
+                            x_ = layer(x_)
+                        elif ind <7:
+                            x_, y_t = layer(x_)
+                            y_array.append(y_t)
+                        elif ind ==7:
+                            x_ = layer(x_)
+                        elif ind <12:
+                            x_ = layer(x_, y_array[-(1+ind-8)])
+                return x_, y_array
+            return custom_forward
+
+        l = 0
+        num_layers = len(self.layers)
+        chunk_length = 1
+        hidden_states = x
+        y_array = []
+        while l < num_layers:
+            end = l+chunk_length
+            if end > num_layers:
+                end = num_layers
+            hidden_states, y_array = checkpoint(custom(l, end),hidden_states, y_array)
+            l = end
+   
+        # # Final layer norm.
+        # output = self.final_layernorm(hidden_states)
+        
+        logits = self.logits(hidden_states)
 
         logits = logits
         logits = F.softmax(logits, dim=1)
-
-
-        #  def custom(start, end):
-        #     def custom_forward(*inputs):
-        #         layers_ = self.layers[start:end]
-        #         x_ = inputs[0]
-        #         for layer in layers_:
-        #             x_ = layer(x_, inputs[1])
-        #         return x_
-        #     return custom_forward
-
-        # if self.checkpoint_activations:
-        #     l = 0
-        #     num_layers = len(self.layers)
-        #     chunk_length = self.checkpoint_num_layers
-        #     while l < num_layers:
-        #         hidden_states = checkpoint(custom(l, l+chunk_length),
-        #                                    hidden_states, attention_mask)
-        #         l += chunk_length
-        # def custom(start, end):
-        #     def custom_forward(*inputs):
-        #         layers_ = self.layers[start:end]
-        #         x_ = inputs[0]
-        #         for layer in layers_:
-        #             x_ = layer(x_, inputs[1])
-        #         return x_
-        #     return custom_forward
-
-        # if self.checkpoint_activations:
-        #     l = 0
-        #     num_layers = len(self.layers)
-        #     chunk_length = self.checkpoint_num_layers
-        #     while l < num_layers:
-        #         hidden_states = checkpoint(custom(l, l+chunk_length),
-        #                                    hidden_states, attention_mask)
-        #         l += chunk_length
-        # else:
-        #     for layer in self.layers:
-        #         hidden_states = layer(hidden_states, attention_mask)
-
-        # # Final layer norm.
-        # output = self.final_layernorm(hidden_states)
         return logits
