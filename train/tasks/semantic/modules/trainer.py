@@ -135,7 +135,7 @@ class Trainer():
             cudnn.benchmark = True
             cudnn.fastest = True
             self.gpu = True
-            self.model.cuda()
+            # self.model.cuda()
 
         self.criterion = nn.NLLLoss(weight=self.loss_w).to(self.device)
         self.ls = Lovasz_softmax(ignore=0).to(self.device)
@@ -261,10 +261,8 @@ class Trainer():
             acc, iou, loss, update_mean,hetero_l = self.train_epoch(train_loader=self.parser.get_train_set(),
                                                            model=self.model,
                                                            criterion=self.criterion,
-                                                           optimizer=None,
                                                            epoch=epoch,
                                                            evaluator=self.evaluator,
-                                                           scheduler=None,
                                                            color_fn=self.parser.to_color,
                                                            report=self.ARCH["train"]["report_batch"],
                                                            show_scans=self.ARCH["train"]["show_scans"])
@@ -343,7 +341,7 @@ class Trainer():
 
         return
 
-    def train_epoch(self, train_loader, model, criterion, optimizer, epoch, evaluator, scheduler, color_fn, report=10,
+    def train_epoch(self, train_loader, model, criterion, epoch, evaluator, color_fn, report=10,
                     show_scans=False):
         losses = AverageMeter()
         acc = AverageMeter()
