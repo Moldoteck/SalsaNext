@@ -125,7 +125,8 @@ class Trainer():
             self.model = SalsaNext(self.parser.get_n_classes())
 
         self.tb_logger = Logger(self.log + "/tb")
-
+        self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam([{'params': self.model.parameters()}], lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
+        
         # GPU?
         self.gpu = False
         self.model_single = self.model
@@ -161,7 +162,6 @@ class Trainer():
     
         # self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam(self.model.parameters(), lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
 
-        self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam([{'params': self.model.parameters()}], lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
         
         steps_per_epoch = self.parser.get_train_size()
         up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
