@@ -203,24 +203,24 @@ class SalsaNext(nn.Module):
         checkpoint = deepspeed.checkpointing.checkpoint
 
     def forward(self, x):
-        downCntx = self.downCntx(x)
-        downCntx = self.downCntx2(downCntx)
-        downCntx = self.downCntx3(downCntx)
+        # downCntx = self.downCntx(x)
+        # downCntx = self.downCntx2(downCntx)
+        # downCntx = self.downCntx3(downCntx)
 
-        down0c, down0b = self.resBlock1(downCntx)
-        down1c, down1b = self.resBlock2(down0c)
-        down2c, down2b = self.resBlock3(down1c)
-        down3c, down3b = self.resBlock4(down2c)
-        down5c = self.resBlock5(down3c)
+        # down0c, down0b = self.resBlock1(downCntx)
+        # down1c, down1b = self.resBlock2(down0c)
+        # down2c, down2b = self.resBlock3(down1c)
+        # down3c, down3b = self.resBlock4(down2c)
+        # down5c = self.resBlock5(down3c)
 
-        up4e = self.upBlock1(down5c,down3b)
-        up3e = self.upBlock2(up4e, down2b)
-        up2e = self.upBlock3(up3e, down1b)
-        up1e = self.upBlock4(up2e, down0b)
-        logits = self.logits(up1e)
+        # up4e = self.upBlock1(down5c,down3b)
+        # up3e = self.upBlock2(up4e, down2b)
+        # up2e = self.upBlock3(up3e, down1b)
+        # up1e = self.upBlock4(up2e, down0b)
+        # logits = self.logits(up1e)
 
-        logits = logits
-        logits = F.softmax(logits, dim=1)
+        # logits = logits
+        # logits = F.softmax(logits, dim=1)
 
 
         def custom(start, end):
@@ -244,7 +244,7 @@ class SalsaNext(nn.Module):
 
         l = 0
         num_layers = len(self.layers)
-        chunk_length = 1
+        chunk_length = 3
         hidden_states = x
         y_array = []
         while l < num_layers:

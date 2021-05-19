@@ -1,16 +1,16 @@
 {
     "gradient_accumulation_steps": 1,
-    "train_micro_batch_size_per_gpu": 35,
+    "train_micro_batch_size_per_gpu": 40,
     "gradient_clipping":1.0,
     "zero_optimization": {
         "stage": 3,
-        "reduce_bucket_size": 2e6,
-        "allgather_bucket_size": 2e6,
+        "reduce_bucket_size": 1e3,
+        "allgather_bucket_size": 1e3,
         "stage3_max_live_parameters": 1e7,
         "stage3_max_reuse_distance": 1e7,
-        "stage3_prefetch_bucket_size": 5e6,
+        "stage3_prefetch_bucket_size": 1e6,
         "stage3_param_persistence_threshold": 1e5,
-        "contiguous_gradients": true,
+        "contiguous_gradients": false,
         "overlap_comm": false,
         "offload_param": {
             "device": "cpu",
