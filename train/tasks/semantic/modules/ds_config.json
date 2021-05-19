@@ -1,7 +1,7 @@
 {
     "gradient_accumulation_steps": 1,
     "train_micro_batch_size_per_gpu": 40,
-    "gradient_clipping":1.0,
+    "gradient_clipping": 1.0,
     "zero_optimization": {
         "stage": 3,
         "reduce_bucket_size": 1e3,
@@ -19,12 +19,12 @@
         "offload_optimizer": {
             "device": "cpu",
             "pin_memory": true
-        }, 
-        "activation_checkpointing": {
-            "partition_activations": true,
-            "contiguous_memory_optimization": false,
-            "cpu_checkpointing": true,
-            "number_checkpoints":1
         }
+    },
+    "activation_checkpointing": {
+        "partition_activations": true,
+        "contiguous_memory_optimization": false,
+        "cpu_checkpointing": true,
+        "number_checkpoints": 1
     }
 }
