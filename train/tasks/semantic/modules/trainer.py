@@ -401,7 +401,6 @@ class Trainer():
             with torch.no_grad():
                 for g in self.optimizer.param_groups:
                     lr = g["lr"]
-                    print(g)
                     for value in g["params"]:
                         if value.grad is not None:
                             w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))

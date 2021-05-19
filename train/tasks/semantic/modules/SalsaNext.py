@@ -140,7 +140,6 @@ class ResBlock(nn.Module):
 
         
         resA = shortcut_array[0] + hidden_states
-        shortcut_array=[]
 
         if self.pooling:
             if self.drop_out:
@@ -222,7 +221,7 @@ class UpBlock(nn.Module):
         l = 0
         num_layers = len(self.layers)
         chunk_length = 1
-        hidden_states = x
+        hidden_states = upB
         accum_array = []
         shortcut_array = []
         while l < num_layers:
