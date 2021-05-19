@@ -371,7 +371,6 @@ class Trainer():
 
             # optimizer.zero_grad()
             model.backward(loss_m)
-            model.step()
             # loss_m.backward()
             # step scheduler
             # scheduler.step()
@@ -411,6 +410,7 @@ class Trainer():
             update_std = update_ratios.std()
             update_ratio_meter.update(update_mean)  # over the epoch
            
+            model.step()
             if i % self.ARCH["train"]["report_batch"] == 0:
                 print('Lr: {lr:.3e} | '
                         'Update: {umean:.3e} mean,{ustd:.3e} std | '
