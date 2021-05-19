@@ -399,8 +399,8 @@ class Trainer():
             update_ratios = []
             for g in self.optimizer.param_groups:
                 lr = g["lr"]
+                print(g)
                 for value in g["params"]:
-                    print(value)
                     if value.grad is not None:
                         w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))
                         update = np.linalg.norm(-max(lr, 1e-10) *
