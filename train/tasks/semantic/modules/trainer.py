@@ -125,7 +125,6 @@ class Trainer():
             self.model = SalsaNext(self.parser.get_n_classes())
 
         self.tb_logger = Logger(self.log + "/tb")
-        self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam([{'params': self.model.parameters()}], lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
         
         # GPU?
         self.gpu = False
@@ -162,12 +161,13 @@ class Trainer():
     
         # self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam(self.model.parameters(), lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
 
+        self.optimizer = deepspeed.ops.adam.DeepSpeedCPUAdam([{'params': self.model.parameters()}], lr=0.01, bias_correction=True, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0001, amsgrad=False, adamw_mode=True)
         
         steps_per_epoch = self.parser.get_train_size()
         up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
         self.scheduler = deepspeed.runtime.lr_schedules.WarmupDecayLR(optimizer= self.optimizer, total_num_steps = self.ARCH["train"]["max_epochs"], warmup_min_lr = 0.0, warmup_max_lr = 0.01, warmup_num_steps = up_steps, last_batch_iteration = -1)
         
-        self.model, self.optimizer,_,self.scheduler = deepspeed.initialize(model=self.model, optimizer=self.optimizer,lr_scheduler=self.scheduler,model_parameters=self.model.parameters(), config='./modules/ds_config.json')
+        self.model, _,_,self.scheduler = deepspeed.initialize(model=self.model, optimizer=self.optimizer,lr_scheduler=self.scheduler,model_parameters=self.model.parameters(), config='./modules/ds_config.json')
         deepspeed.checkpointing.configure(None, deepspeed_config='./modules/ds_config.json')
   
         # final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
