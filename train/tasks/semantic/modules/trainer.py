@@ -167,7 +167,7 @@ class Trainer():
         up_steps = int(self.ARCH["train"]["wup_epochs"] * steps_per_epoch)
         self.scheduler = deepspeed.runtime.lr_schedules.WarmupDecayLR(optimizer= self.optimizer, total_num_steps = self.ARCH["train"]["max_epochs"], warmup_min_lr = 0.0, warmup_max_lr = 0.01, warmup_num_steps = up_steps, last_batch_iteration = -1)
         
-        self.model, _,_,self.scheduler = deepspeed.initialize(model=self.model, optimizer=self.optimizer,lr_scheduler=self.scheduler,model_parameters=self.model.parameters(), config='./modules/ds_config.json')
+        self.model, self.optimizer,_,self.scheduler = deepspeed.initialize(model=self.model, optimizer=self.optimizer,lr_scheduler=self.scheduler,model_parameters=self.model.parameters(), config='./modules/ds_config.json')
         deepspeed.checkpointing.configure(None, deepspeed_config='./modules/ds_config.json')
   
         # final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
