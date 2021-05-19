@@ -107,13 +107,17 @@ class ResBlock(nn.Module):
             def custom_forward(*inputs):
                 x_ = inputs[0][0]
                 accum_array = inputs[0][1]
+                og_in = inputs[0][2]
                 shortcut_array = []
                 for ind, layer in enumerate(self.layers):
                     if start<=ind<end:
                         if ind == 11:
                             x_ = torch.cat(accum_array,dim=1)
                             accum_array = []
-                        x_ = layer(x_)
+                        if ind == 2:
+                            x_ = layer(og_in)
+                        else:
+                            x_ = layer(x_)
                         if ind == 1:
                             shortcut_array.append(x_)
                         if ind == 4 or ind == 7 or ind == 10:
@@ -133,7 +137,7 @@ class ResBlock(nn.Module):
             if end > num_layers:
                 end = num_layers
             if len(shortcut_array)>0:
-                hidden_states, accum_array, _ = checkpoint(custom(l, end),[hidden_states, accum_array])
+                hidden_states, accum_array, _ = checkpoint(custom(l, end),[hidden_states, accum_array, x])
             else:
                 hidden_states, accum_array, shortcut_array = checkpoint(custom(l, end),[hidden_states, accum_array])
             l = end
@@ -223,7 +227,6 @@ class UpBlock(nn.Module):
         chunk_length = 1
         hidden_states = upB
         accum_array = []
-        shortcut_array = []
         while l < num_layers:
             end = l+chunk_length
             if end > num_layers:
