@@ -21,7 +21,6 @@ dependencies:
   - cffi
   - cudnn=8.0.4=cuda11.0_0
   - ipykernel
-  - -e git+https://github.com/ChristophReich1996/Involution
   - gast
   - google-pasta
   - hdf5
@@ -55,6 +54,7 @@ dependencies:
   - zlib
   - pip:
     - deepspeed
+    - "--editable=git+https://github.com/ChristophReich1996/Involution"
     - absl-py
     - pyreadline
     - astor
