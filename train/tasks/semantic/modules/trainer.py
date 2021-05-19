@@ -135,7 +135,7 @@ class Trainer():
             cudnn.benchmark = True
             cudnn.fastest = True
             self.gpu = True
-            # self.model.cuda()
+            self.model.cuda()
 
         self.criterion = nn.NLLLoss(weight=self.loss_w).to(self.device)
         self.ls = Lovasz_softmax(ignore=0).to(self.device)
@@ -168,7 +168,7 @@ class Trainer():
         self.scheduler = deepspeed.runtime.lr_schedules.WarmupDecayLR(optimizer= self.optimizer, total_num_steps = self.ARCH["train"]["max_epochs"], warmup_min_lr = 0.0, warmup_max_lr = 0.01, warmup_num_steps = up_steps, last_batch_iteration = -1)
         
         self.model, _,_,self.scheduler = deepspeed.initialize(model=self.model, optimizer=self.optimizer,lr_scheduler=self.scheduler,model_parameters=self.model.parameters(), config='./modules/ds_config.json')
-        # deepspeed.checkpointing.configure(deepspeed_config='./modules/ds_config.json')
+        deepspeed.checkpointing.configure(None, deepspeed_config='./modules/ds_config.json')
   
         # final_decay = self.ARCH["train"]["lr_decay"] ** (1 / steps_per_epoch)
         print(self.model)

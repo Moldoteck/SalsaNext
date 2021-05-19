@@ -199,9 +199,8 @@ class SalsaNext(nn.Module):
         self.resBlock1,self.resBlock2,self.resBlock3, self.resBlock4, self.resBlock5,
         self.upBlock1, self.upBlock2, self.upBlock3, self.upBlock4]
 
-        # global get_cuda_rng_tracker, checkpoint
-        # get_cuda_rng_tracker = deepspeed.checkpointing.get_cuda_rng_tracker
-        # checkpoint = deepspeed.checkpointing.checkpoint
+        global checkpoint
+        checkpoint = deepspeed.checkpointing.checkpoint
 
     def forward(self, x):
         downCntx = self.downCntx(x)
@@ -224,41 +223,42 @@ class SalsaNext(nn.Module):
         logits = F.softmax(logits, dim=1)
 
 
-        # def custom(start, end):
-        #     def custom_forward(*inputs):
-        #         x_ = inputs[0]
-        #         y_array = inputs[1]#initial 0 length
-        #         for ind, layer in enumerate(self.layers):
-        #             if start<=ind<end:
-        #                 if ind<3:
-        #                     x_ = layer(x_)
-        #                 elif ind <7:
-        #                     x_, y_t = layer(x_)
-        #                     y_array.append(y_t)
-        #                 elif ind ==7:
-        #                     x_ = layer(x_)
-        #                 elif ind <12:
-        #                     x_ = layer(x_, y_array[-(1+ind-8)])
-        #         return x_, y_array
-        #     return custom_forward
+        def custom(start, end):
+            def custom_forward(*inputs):
+                x_ = inputs[0]
+                y_array = inputs[1]#initial 0 length
+                for ind, layer in enumerate(self.layers):
+                    if start<=ind<end:
+                        if ind<3:
+                            x_ = layer(x_)
+                        elif ind <7:
+                            x_, y_t = layer(x_)
+                            y_array.append(y_t)
+                        elif ind ==7:
+                            x_ = layer(x_)
+                        elif ind <12:
+                            x_ = layer(x_, y_array[-1])
+                            y_array=y_array[:-1]
+                return x_, y_array
+            return custom_forward
 
-        # l = 0
-        # num_layers = len(self.layers)
-        # chunk_length = 1
-        # hidden_states = x
-        # y_array = []
-        # while l < num_layers:
-        #     end = l+chunk_length
-        #     if end > num_layers:
-        #         end = num_layers
-        #     hidden_states, y_array = checkpoint(custom(l, end),hidden_states, y_array)
-        #     l = end
+        l = 0
+        num_layers = len(self.layers)
+        chunk_length = 1
+        hidden_states = x
+        y_array = []
+        while l < num_layers:
+            end = l+chunk_length
+            if end > num_layers:
+                end = num_layers
+            hidden_states, y_array = checkpoint(custom(l, end),hidden_states, y_array)
+            l = end
    
-        # # # Final layer norm.
-        # # output = self.final_layernorm(hidden_states)
+        # # Final layer norm.
+        # output = self.final_layernorm(hidden_states)
         
-        # logits = self.logits(hidden_states)
+        logits = self.logits(hidden_states)
 
-        # logits = logits
-        # logits = F.softmax(logits, dim=1)
+        logits = logits
+        logits = F.softmax(logits, dim=1)
         return logits
