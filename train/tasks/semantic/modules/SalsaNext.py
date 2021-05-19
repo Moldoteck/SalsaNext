@@ -78,6 +78,16 @@ class ResContextBlock(nn.Module):
         output = shortcut + resA2
         return output
 
+class LeakyBatch(nn.Module):
+    def __init__(self, out_filters):
+        super(LeakyBatch, self).__init__()
+        self.act = nn.LeakyReLU()
+        self.bn = nn.BatchNorm2d(out_filters)
+    def forward(self, x):
+        val = self.act(x)
+        val = self.bn(val)
+        return val
+
 
 class ResBlock(nn.Module):
     def __init__(self, in_filters, out_filters, dropout_rate, kernel_size=(3, 3), stride=1,
