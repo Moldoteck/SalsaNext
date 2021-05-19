@@ -54,7 +54,7 @@ dependencies:
   - zlib
   - pip:
     - deepspeed
-    - "-e git+https://github.com/ChristophReich1996/Involution"
+    - "-e git+https://github.com/ChristophReich1996/Involution#egg=involution"
     - absl-py
     - pyreadline
     - astor
