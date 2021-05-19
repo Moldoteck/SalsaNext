@@ -371,6 +371,7 @@ class Trainer():
 
             # optimizer.zero_grad()
             model.backward(loss_m)
+            model.step()
             # loss_m.backward()
             # step scheduler
             # scheduler.step()
@@ -396,21 +397,22 @@ class Trainer():
             # get gradient updates and weights, so I can print the relationship of
             # their norms
             update_ratios = []
-            for g in self.optimizer.param_groups:
-                lr = g["lr"]
-                print(g)
-                for value in g["params"]:
-                    if value.grad is not None:
-                        w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))
-                        update = np.linalg.norm(-max(lr, 1e-10) *
-                                                value.grad.cpu().numpy().reshape((-1)))
-                        update_ratios.append(update / max(w, 1e-10))
+            
+            with torch.no_grad():
+                for g in self.optimizer.param_groups:
+                    lr = g["lr"]
+                    print(g)
+                    for value in g["params"]:
+                        if value.grad is not None:
+                            w = np.linalg.norm(value.data.cpu().numpy().reshape((-1)))
+                            update = np.linalg.norm(-max(lr, 1e-10) *
+                                                    value.grad.cpu().numpy().reshape((-1)))
+                            update_ratios.append(update / max(w, 1e-10))
             update_ratios = np.array(update_ratios)
             update_mean = update_ratios.mean()
             update_std = update_ratios.std()
             update_ratio_meter.update(update_mean)  # over the epoch
            
-            model.step()
             if i % self.ARCH["train"]["report_batch"] == 0:
                 print('Lr: {lr:.3e} | '
                         'Update: {umean:.3e} mean,{ustd:.3e} std | '
