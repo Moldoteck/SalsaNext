@@ -72,29 +72,75 @@ class ResBlock(nn.Module):
             self.pool = nn.AvgPool2d(kernel_size=kernel_size, stride=2, padding=1)
         else:
             self.dropout = nn.Dropout2d(p=dropout_rate)
+        
+        self.layers = [self.conv1, self.act1,
+        self.conv2, self.act2, self.bn1,
+        self.conv3, self.act3, self.bn2,
+        self.conv4, self.act4, self.bn3,
+        self.conv5, self.act5, self.bn4]
 
     def forward(self, x):
-        shortcut = self.conv1(x)
-        shortcut = self.act1(shortcut)
+        # shortcut = self.conv1(x)
+        # shortcut = self.act1(shortcut)
 
-        resA = self.conv2(x)
-        resA = self.act2(resA)
-        resA1 = self.bn1(resA)
+        # resA = self.conv2(x)
+        # resA = self.act2(resA)
+        # resA1 = self.bn1(resA)
 
-        resA = self.conv3(resA1)
-        resA = self.act3(resA)
-        resA2 = self.bn2(resA)
+        # resA = self.conv3(resA1)
+        # resA = self.act3(resA)
+        # resA2 = self.bn2(resA)
 
-        resA = self.conv4(resA2)
-        resA = self.act4(resA)
-        resA3 = self.bn3(resA)
+        # resA = self.conv4(resA2)
+        # resA = self.act4(resA)
+        # resA3 = self.bn3(resA)
 
-        concat = torch.cat((resA1,resA2,resA3),dim=1)
-        resA = self.conv5(concat)
-        resA = self.act5(resA)
-        resA = self.bn4(resA)
-        resA = shortcut + resA
+        # concat = torch.cat((resA1,resA2,resA3),dim=1)
+        # resA = self.conv5(concat)
+        # resA = self.act5(resA)
+        # resA = self.bn4(resA)
 
+        # resA = shortcut + resA
+
+
+        def custom(start, end):
+            def custom_forward(*inputs):
+                x_ = inputs[0][0]
+                accum_array = inputs[0][1]
+                shortcut_array = []
+                for ind, layer in enumerate(self.layers):
+                    if start<=ind<end:
+                        if ind == 11:
+                            x_ = torch.cat(accum_array,dim=1)
+                            accum_array = []
+                        x_ = layer(x_)
+                        if ind == 1:
+                            shortcut_array.append(x_)
+                        if ind == 4 or ind == 7 or ind == 10:
+                            accum_array.append(x_)
+                      
+                return x_, accum_array, shortcut_array
+            return custom_forward
+
+        l = 0
+        num_layers = len(self.layers)
+        chunk_length = 1
+        hidden_states = x
+        accum_array = []
+        shortcut_array = []
+        while l < num_layers:
+            end = l+chunk_length
+            if end > num_layers:
+                end = num_layers
+            if len(shortcut_array)>0:
+                hidden_states, accum_array, _ = checkpoint(custom(l, end),[hidden_states, accum_array])
+            else:
+                hidden_states, accum_array, shortcut_array = checkpoint(custom(l, end),[hidden_states, accum_array])
+            l = end
+
+        
+        resA = shortcut_array[0] + hidden_states
+        shortcut_array=[]
 
         if self.pooling:
             if self.drop_out:
@@ -142,6 +188,11 @@ class UpBlock(nn.Module):
 
         self.dropout3 = nn.Dropout2d(p=dropout_rate)
 
+        self.layers= [self.conv1, self.act1, self.bn1,
+        self.conv2, self.act2, self.bn2,
+        self.conv3, self.act3, self.bn3,
+        self.conv4, self.act4, self.bn4]
+
     def forward(self, x, skip):
         upA = nn.PixelShuffle(2)(x)
         if self.drop_out:
@@ -151,22 +202,54 @@ class UpBlock(nn.Module):
         if self.drop_out:
             upB = self.dropout2(upB)
 
-        upE = self.conv1(upB)
-        upE = self.act1(upE)
-        upE1 = self.bn1(upE)
+        
+        def custom(start, end):
+            def custom_forward(*inputs):
+                x_ = inputs[0][0]
+                accum_array = inputs[0][1]
+                for ind, layer in enumerate(self.layers):
+                    if start<=ind<end:
+                        if ind == 9:
+                            x_ = torch.cat(accum_array,dim=1)
+                            accum_array = []
+                        x_ = layer(x_)
+                        if ind == 2 or ind == 5 or ind == 8:
+                            accum_array.append(x_)
+                      
+                return x_, accum_array
+            return custom_forward
 
-        upE = self.conv2(upE1)
-        upE = self.act2(upE)
-        upE2 = self.bn2(upE)
+        l = 0
+        num_layers = len(self.layers)
+        chunk_length = 1
+        hidden_states = x
+        accum_array = []
+        shortcut_array = []
+        while l < num_layers:
+            end = l+chunk_length
+            if end > num_layers:
+                end = num_layers
+            hidden_states, accum_array = checkpoint(custom(l, end),[hidden_states, accum_array])
+            l = end
 
-        upE = self.conv3(upE2)
-        upE = self.act3(upE)
-        upE3 = self.bn3(upE)
+        upE = hidden_states
 
-        concat = torch.cat((upE1,upE2,upE3),dim=1)
-        upE = self.conv4(concat)
-        upE = self.act4(upE)
-        upE = self.bn4(upE)
+        # upE = self.conv1(upB)
+        # upE = self.act1(upE)
+        # upE1 = self.bn1(upE)
+
+        # upE = self.conv2(upE1)
+        # upE = self.act2(upE)
+        # upE2 = self.bn2(upE)
+
+        # upE = self.conv3(upE2)
+        # upE = self.act3(upE)
+        # upE3 = self.bn3(upE)
+
+        # concat = torch.cat((upE1,upE2,upE3),dim=1)
+        # upE = self.conv4(concat)
+        # upE = self.act4(upE)
+        # upE = self.bn4(upE)
         if self.drop_out:
             upE = self.dropout3(upE)
 
