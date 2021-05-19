@@ -6,6 +6,7 @@ import __init__ as booger
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from involution import Involution2d
 
 import deepspeed
 
@@ -85,22 +86,27 @@ class ResBlock(nn.Module):
         self.deepspeed_checkpointing = False
         self.pooling = pooling
         self.drop_out = drop_out
-        self.conv1 = nn.Conv2d(in_filters, out_filters, kernel_size=(1, 1), stride=stride)
+        # self.conv1 = nn.Conv2d(in_filters, out_filters, kernel_size=(1, 1), stride=stride)
+        self.conv1 = Involution2d(in_channels=in_filters,out_channels= out_filters,kernel_size=(1,1),stride=stride)
         self.act1 = nn.LeakyReLU()
 
-        self.conv2 = nn.Conv2d(in_filters, out_filters, kernel_size=(3,3), padding=1)
+        # self.conv2 = nn.Conv2d(in_filters, out_filters, kernel_size=(3,3), padding=1)
+        self.conv2 = Involution2d(in_channels=in_filters,out_channels= out_filters,kernel_size=(3,3),stride=1, padding=1)
         self.act2 = nn.LeakyReLU()
         self.bn1 = nn.BatchNorm2d(out_filters)
 
-        self.conv3 = nn.Conv2d(out_filters, out_filters, kernel_size=(3,3),dilation=2, padding=2)
+        # self.conv3 = nn.Conv2d(out_filters, out_filters, kernel_size=(3,3),dilation=2, padding=2)
+        self.conv3 = Involution2d(in_channels=out_filters,out_channels= out_filters,kernel_size=(3,3),stride=1,dilation=2, padding=2)
         self.act3 = nn.LeakyReLU()
         self.bn2 = nn.BatchNorm2d(out_filters)
 
-        self.conv4 = nn.Conv2d(out_filters, out_filters, kernel_size=(2, 2), dilation=2, padding=1)
+        # self.conv4 = nn.Conv2d(out_filters, out_filters, kernel_size=(2, 2), dilation=2, padding=1)
+        self.conv4 = Involution2d(in_channels=out_filters,out_channels= out_filters,kernel_size=(2,2),stride=1,dilation=2, padding=1)
         self.act4 = nn.LeakyReLU()
         self.bn3 = nn.BatchNorm2d(out_filters)
 
-        self.conv5 = nn.Conv2d(out_filters*3, out_filters, kernel_size=(1, 1))
+        # self.conv5 = nn.Conv2d(out_filters*3, out_filters, kernel_size=(1, 1))
+        self.conv5 = Involution2d(in_channels=out_filters*3,out_channels= out_filters,kernel_size=(1,1))
         self.act5 = nn.LeakyReLU()
         self.bn4 = nn.BatchNorm2d(out_filters)
 
