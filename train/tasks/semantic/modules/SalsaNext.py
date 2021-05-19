@@ -139,7 +139,7 @@ class ResBlock(nn.Module):
             if len(shortcut_array)>0:
                 hidden_states, accum_array, _ = checkpoint(custom(l, end),[hidden_states, accum_array, x])
             else:
-                hidden_states, accum_array, shortcut_array = checkpoint(custom(l, end),[hidden_states, accum_array])
+                hidden_states, accum_array, shortcut_array = checkpoint(custom(l, end),[hidden_states, accum_array, x])
             l = end
 
         
