@@ -307,7 +307,7 @@ class Trainer():
 
         return
 
-    def train_epoch(self, train_loader, model, criterion, epoch, evaluator, color_fn, report=10,
+    def train_epoch(self, train_loader, criterion, epoch, evaluator, color_fn, report=10,
                     show_scans=False):
         losses = AverageMeter()
         acc = AverageMeter()
@@ -332,14 +332,14 @@ class Trainer():
                 proj_labels = proj_labels.cuda(non_blocking=True).long()
 
             # compute output
-            output = model(in_vol)
+            output = self.model(in_vol)
 
             # compute loss
             log_out = torch.log(output.clamp(min=1e-8))
             jacc = self.ls(output, proj_labels.long())
             wce = criterion(log_out, proj_labels.long())
             loss_m = wce + jacc
-            model.backward(loss_m)
+            self.model.backward(loss_m)
 
             # measure accuracy and record loss
             loss = loss_m.mean()
@@ -377,8 +377,8 @@ class Trainer():
             update_std = update_ratios.std()
             update_ratio_meter.update(update_mean)  # over the epoch
 
-            model.step()
-            model.zero_grad()
+            self.model.step()
+            self.model.zero_grad()
             if i % self.ARCH["train"]["report_batch"] == 0:
                 print('Lr: {lr:.3e} | '
                       'Update: {umean:.3e} mean,{ustd:.3e} std | '
@@ -406,7 +406,7 @@ class Trainer():
 
         return acc.avg, iou.avg, losses.avg, update_ratio_meter.avg, hetero_l.avg
 
-    def validate(self, val_loader, model, criterion, evaluator, class_func, color_fn, save_scans):
+    def validate(self, val_loader, criterion, evaluator, class_func, color_fn, save_scans):
         losses = AverageMeter()
         jaccs = AverageMeter()
         wces = AverageMeter()
@@ -416,7 +416,7 @@ class Trainer():
         rand_imgs = []
 
         # switch to evaluate mode
-        model.eval()
+        self.model.eval()
         evaluator.reset()
 
         # empty the cache to infer in high res
@@ -432,7 +432,7 @@ class Trainer():
                     proj_labels = proj_labels.cuda(non_blocking=True).long()
 
                 # compute output
-                output = model(in_vol)
+                output = self.model(in_vol)
                 log_out = torch.log(output.clamp(min=1e-8))
                 jacc = self.ls(output, proj_labels)
                 wce = criterion(log_out, proj_labels)
