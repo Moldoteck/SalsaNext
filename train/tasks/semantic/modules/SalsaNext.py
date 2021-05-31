@@ -13,6 +13,8 @@ import deepspeed
 class ResContextBlock(nn.Module):
     def __init__(self, in_filters, out_filters):
         super(ResContextBlock, self).__init__()
+        global checkpoint
+        checkpoint = deepspeed.checkpointing.checkpoint
         self.deepspeed_checkpointing = False
         self.conv1 = nn.Conv2d(in_filters, out_filters, kernel_size=(1, 1), stride=1)
         self.act1 = nn.LeakyReLU()
@@ -37,7 +39,7 @@ class ResContextBlock(nn.Module):
                 x_ = inputs[0]
                 shortcut_array = []
                 for ind, layer in enumerate(self.layers):
-                    if start<=ind<end:
+                    if start <= ind < end:
                         x_ = layer(x_)
                         if ind == 1:
                             shortcut_array.append(x_)
@@ -53,7 +55,7 @@ class ResContextBlock(nn.Module):
             end = l+chunk_length
             if end > num_layers:
                 end = num_layers
-            if len(shortcut_array)>0:
+            if len(shortcut_array) > 0:
                 hidden_states, _ = checkpoint(custom(l, end),hidden_states)
             else:
                 hidden_states, shortcut_array = checkpoint(custom(l, end),hidden_states)
@@ -82,6 +84,8 @@ class ResBlock(nn.Module):
     def __init__(self, in_filters, out_filters, dropout_rate, kernel_size=(3, 3), stride=1,
                  pooling=True, drop_out=True):
         super(ResBlock, self).__init__()
+        global checkpoint
+        checkpoint = deepspeed.checkpointing.checkpoint
         self.deepspeed_checkpointing = False
         self.pooling = pooling
         self.drop_out = drop_out
@@ -123,14 +127,14 @@ class ResBlock(nn.Module):
             def custom_forward(*inputs):
                 x_ = inputs[0][0]
                 accum_array = inputs[0][1]
-                og_input = inputs[0][2]
                 shortcut_array = []
                 for ind, layer in enumerate(self.layers):
-                    if start<=ind<end:
+                    if start <= ind < end:
                         if ind == 11:
                             x_ = torch.cat(accum_array,dim=1)
                             accum_array = []
                         if ind == 2:
+                            og_input = inputs[0][2]
                             x_ = layer(og_input)
                         else:
                             x_ = layer(x_)
@@ -203,7 +207,9 @@ class ResBlock(nn.Module):
 class UpBlock(nn.Module):
     def __init__(self, in_filters, out_filters, dropout_rate, drop_out=True):
         super(UpBlock, self).__init__()
-        self.deepspeed_checkpointing =False
+        global checkpoint
+        checkpoint = deepspeed.checkpointing.checkpoint
+        self.deepspeed_checkpointing = False
         self.drop_out = drop_out
         self.in_filters = in_filters
         self.out_filters = out_filters
@@ -232,7 +238,7 @@ class UpBlock(nn.Module):
         self.dropout3 = nn.Dropout2d(p=dropout_rate)
 
         if self.deepspeed_checkpointing:
-            self.layers= [self.conv1, self.act1, self.bn1,
+            self.layers = [self.conv1, self.act1, self.bn1,
         self.conv2, self.act2, self.bn2,
         self.conv3, self.act3, self.bn3,
         self.conv4, self.act4, self.bn4]
@@ -303,6 +309,8 @@ class UpBlock(nn.Module):
 class SalsaNext(nn.Module):
     def __init__(self, nclasses):
         super(SalsaNext, self).__init__()
+        global checkpoint
+        checkpoint = deepspeed.checkpointing.checkpoint
         self.nclasses = nclasses
         self.deepspeed_checkpointing = True
 
@@ -328,23 +336,21 @@ class SalsaNext(nn.Module):
         self.resBlock1,self.resBlock2,self.resBlock3, self.resBlock4, self.resBlock5,
         self.upBlock1, self.upBlock2, self.upBlock3, self.upBlock4]
 
-        global checkpoint
-        checkpoint = deepspeed.checkpointing.checkpoint
-    def checkpoint_forward(self, x, chunk_length=1):
+    def checkpoint_forward(self, x, chunk_length=3):
         def custom(start, end):
             def custom_forward(*inputs):
-                x_ = inputs[0]
-                y_array = inputs[1]
+                x_ = inputs[0][0]
+                y_array = inputs[0][1]
                 for ind, layer in enumerate(self.layers):
-                    if start<=ind<end:
-                        if ind<3:
+                    if start <= ind < end:
+                        if ind < 3:
                             x_ = layer(x_)
-                        elif ind <7:
+                        elif ind < 7:
                             x_, y_t = layer(x_)
                             y_array.append(y_t)
-                        elif ind ==7:
+                        elif ind == 7:
                             x_ = layer(x_)
-                        elif ind <12:
+                        elif ind < 12:
                             x_ = layer(x_, y_array[-1])
                             y_array=y_array[:-1]
                 return x_, y_array
@@ -352,14 +358,13 @@ class SalsaNext(nn.Module):
 
         l = 0
         num_layers = len(self.layers)
-        chunk_length = 3
         hidden_states = x
         y_array = []
         while l < num_layers:
             end = l+chunk_length
             if end > num_layers:
                 end = num_layers
-            hidden_states, y_array = checkpoint(custom(l, end),hidden_states, y_array)
+            hidden_states, y_array = checkpoint(custom(l, end), [hidden_states, y_array])
             l = end
         return hidden_states
 

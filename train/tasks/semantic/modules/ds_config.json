@@ -1,7 +1,8 @@
 {
     "gradient_accumulation_steps": 1,
-    "train_micro_batch_size_per_gpu": 40,
+    "train_micro_batch_size_per_gpu": 7,
     "gradient_clipping": 1.0,
+    "zero_allow_untested_optimizer": true,
     "zero_optimization": {
         "stage": 3,
         "reduce_bucket_size": 1e3,
