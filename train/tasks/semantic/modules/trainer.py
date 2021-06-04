@@ -149,7 +149,7 @@ class Trainer():
             torch.nn.Module.dump_patches = True
             w_dict = self.model.load_checkpoint(
                 path, load_optimizer_states=True, load_lr_scheduler_states=True)
-            w_dict=w_dict[0]#???
+            w_dict=w_dict[1]
             self.optimizer = self.model.optimizer
             self.scheduler = self.model.lr_scheduler
             self.epoch = w_dict['epoch'] + 1
@@ -339,6 +339,7 @@ class Trainer():
             jacc = self.ls(output, proj_labels.long())
             wce = criterion(log_out, proj_labels.long())
             loss_m = wce + jacc
+            self.model.zero_grad()
             self.model.backward(loss_m)
 
             # measure accuracy and record loss
@@ -378,7 +379,6 @@ class Trainer():
             update_ratio_meter.update(update_mean)  # over the epoch
 
             self.model.step()
-            self.model.zero_grad()
             if i % self.ARCH["train"]["report_batch"] == 0:
                 print('Lr: {lr:.3e} | '
                       'Update: {umean:.3e} mean,{ustd:.3e} std | '
@@ -462,6 +462,7 @@ class Trainer():
                 # measure elapsed time
                 self.batch_time_e.update(time.time() - end)
                 end = time.time()
+                deepspeed.checkpointing.reset()
 
             accuracy = evaluator.getacc()
             jaccard, class_jaccard = evaluator.getIoU()

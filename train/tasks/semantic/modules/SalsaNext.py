@@ -27,44 +27,18 @@ class ResContextBlock(nn.Module):
         self.act3 = nn.LeakyReLU()
         self.bn2 = nn.BatchNorm2d(out_filters)
 
-        if self.deepspeed_checkpointing:
-            self.layers = [self.conv1, self.act1,
-            self.conv2, self.act2, self.bn1,
-            self.conv3, self.act3, self.bn2]
-
-    # Forwarding using deepspeed checkpoints
-    def checkpoint_forward(self, x, chunk_length=1):
-        def custom(start, end):
-            def custom_forward(*inputs):
-                x_ = inputs[0]
-                shortcut_array = []
-                for ind, layer in enumerate(self.layers):
-                    if start <= ind < end:
-                        x_ = layer(x_)
-                        if ind == 1:
-                            shortcut_array.append(x_)
-                      
-                return x_, shortcut_array
-            return custom_forward
-
-        l = 0
-        num_layers = len(self.layers)
-        hidden_states = x
-        shortcut_array = []
-        while l < num_layers:
-            end = l+chunk_length
-            if end > num_layers:
-                end = num_layers
-            if len(shortcut_array) > 0:
-                hidden_states, _ = checkpoint(custom(l, end),hidden_states)
-            else:
-                hidden_states, shortcut_array = checkpoint(custom(l, end),hidden_states)
-            l = end
-        return hidden_states, shortcut_array[0]
-
     def forward(self, x):
         if self.deepspeed_checkpointing:
-            resA2, shortcut = self.checkpoint_forward(x)
+            shortcut = checkpoint(self.conv1, x.requires_grad_())
+            shortcut = checkpoint(self.act1, shortcut.requires_grad_())
+
+            resA = checkpoint(self.conv2, shortcut.requires_grad_())
+            resA = checkpoint(self.act2, resA.requires_grad_())
+            resA1 = checkpoint(self.bn1, resA.requires_grad_())
+
+            resA = checkpoint(self.conv3, resA1.requires_grad_())
+            resA = checkpoint(self.act3, resA.requires_grad_())
+            resA2 = checkpoint(self.bn2, resA.requires_grad_())
         else:
             shortcut = self.conv1(x)
             shortcut = self.act1(shortcut)
@@ -113,58 +87,36 @@ class ResBlock(nn.Module):
             self.pool = nn.AvgPool2d(kernel_size=kernel_size, stride=2, padding=1)
         else:
             self.dropout = nn.Dropout2d(p=dropout_rate)
-        
-        if self.deepspeed_checkpointing:
-            self.layers = [self.conv1, self.act1,
-        self.conv2, self.act2, self.bn1,
-        self.conv3, self.act3, self.bn2,
-        self.conv4, self.act4, self.bn3,
-        self.conv5, self.act5, self.bn4]
 
-    # Forwarding using deepspeed checkpoints
-    def checkpoint_forward(self, x, chunk_length=1):
-        def custom(start, end):
-            def custom_forward(*inputs):
-                x_ = inputs[0][0]
-                accum_array = inputs[0][1]
-                shortcut_array = []
-                for ind, layer in enumerate(self.layers):
-                    if start <= ind < end:
-                        if ind == 11:
-                            x_ = torch.cat(accum_array,dim=1)
-                            accum_array = []
-                        if ind == 2:
-                            og_input = inputs[0][2]
-                            x_ = layer(og_input)
-                        else:
-                            x_ = layer(x_)
-                        if ind == 1:
-                            shortcut_array.append(x_)
-                        if ind == 4 or ind == 7 or ind == 10:
-                            accum_array.append(x_)
-                      
-                return x_, accum_array, shortcut_array
-            return custom_forward
-
-        l = 0
-        num_layers = len(self.layers)
-        hidden_states = x
-        accum_array = []
-        shortcut_array = []
-        while l < num_layers:
-            end = l+chunk_length
-            if end > num_layers:
-                end = num_layers
-            if len(shortcut_array)>0:
-                hidden_states, accum_array, _ = checkpoint(custom(l, end),[hidden_states, accum_array, x])
-            else:
-                hidden_states, accum_array, shortcut_array = checkpoint(custom(l, end),[hidden_states, accum_array, x])
-            l = end
-        return hidden_states, shortcut_array[0]
-
+  
     def forward(self, x):
         if self.deepspeed_checkpointing:
-            resA, shortcut = self.checkpoint_forward(x)
+            def custom():
+                def custom_forward(*inputs):
+                    return inputs[0]+inputs[1]
+                return custom_forward
+            shortcut = checkpoint(self.conv1, x.requires_grad_())
+            shortcut = checkpoint(self.act1, shortcut.requires_grad_())
+
+            resA = checkpoint(self.conv2, x.requires_grad_())
+            resA = checkpoint(self.act2, resA.requires_grad_())
+            resA1 = checkpoint(self.bn1, resA.requires_grad_())
+
+            resA = checkpoint(self.conv3, resA1.requires_grad_())
+            resA = checkpoint(self.act3, resA.requires_grad_())
+            resA2 = checkpoint(self.bn2, resA.requires_grad_())
+
+            resA = checkpoint(self.conv4, resA2.requires_grad_())
+            resA = checkpoint(self.act4, resA.requires_grad_())
+            resA3 = checkpoint(self.bn3, resA.requires_grad_())
+
+            concat = torch.cat((resA1.requires_grad_(),resA2.requires_grad_(),resA3.requires_grad_()),dim=1)
+            resA = checkpoint(self.conv5, concat)
+            resA = checkpoint(self.act5, resA.requires_grad_())
+            resA = checkpoint(self.bn4, resA.requires_grad_())
+
+            resA = checkpoint(custom(), shortcut.requires_grad_() ,resA.requires_grad_())
+            
         else:
             shortcut = self.conv1(x)
             shortcut = self.act1(shortcut)
@@ -186,7 +138,7 @@ class ResBlock(nn.Module):
             resA = self.act5(resA)
             resA = self.bn4(resA)
 
-        resA = shortcut + resA
+            resA = shortcut + resA
 
         if self.pooling:
             if self.drop_out:
@@ -237,41 +189,6 @@ class UpBlock(nn.Module):
 
         self.dropout3 = nn.Dropout2d(p=dropout_rate)
 
-        if self.deepspeed_checkpointing:
-            self.layers = [self.conv1, self.act1, self.bn1,
-        self.conv2, self.act2, self.bn2,
-        self.conv3, self.act3, self.bn3,
-        self.conv4, self.act4, self.bn4]
-
-    def checkpoint_forward(self, x, chunk_length=1):
-        def custom(start, end):
-            def custom_forward(*inputs):
-                x_ = inputs[0][0]
-                accum_array = inputs[0][1]
-                for ind, layer in enumerate(self.layers):
-                    if start<=ind<end:
-                        if ind == 9:
-                            x_ = torch.cat(accum_array,dim=1)
-                            accum_array = []
-                        x_ = layer(x_)
-                        if ind == 2 or ind == 5 or ind == 8:
-                            accum_array.append(x_)
-                      
-                return x_, accum_array
-            return custom_forward
-
-        l = 0
-        num_layers = len(self.layers)
-        chunk_length = 1
-        hidden_states = x
-        accum_array = []
-        while l < num_layers:
-            end = l+chunk_length
-            if end > num_layers:
-                end = num_layers
-            hidden_states, accum_array = checkpoint(custom(l, end),[hidden_states, accum_array])
-            l = end
-
     def forward(self, x, skip):
         upA = nn.PixelShuffle(2)(x)
         if self.drop_out:
@@ -282,7 +199,23 @@ class UpBlock(nn.Module):
             upB = self.dropout2(upB)
 
         if self.deepspeed_checkpointing:
-            upE = self.checkpoint_forward(upB)
+            upE = checkpoint(self.conv1, upB.requires_grad_())
+            upE = checkpoint(self.act1, upE.requires_grad_())
+            upE1 = checkpoint(self.bn1, upE.requires_grad_())
+
+            upE = checkpoint(self.conv2, upE1.requires_grad_())
+            upE = checkpoint(self.act2, upE.requires_grad_())
+            upE2 = checkpoint(self.bn2, upE.requires_grad_())
+
+            upE = checkpoint(self.conv3, upE2.requires_grad_())
+            upE = checkpoint(self.act3, upE.requires_grad_())
+            upE3 = checkpoint(self.bn3, upE.requires_grad_())
+
+            concat = torch.cat((upE1.requires_grad_(),upE2.requires_grad_(),upE3.requires_grad_()),dim=1)
+            upE = checkpoint(self.conv4, concat.requires_grad_())
+            upE = checkpoint(self.act4, upE.requires_grad_())
+            upE = checkpoint(self.bn4, upE.requires_grad_())
+            upE = upE.requires_grad_()
         else:
             upE = self.conv1(upB)
             upE = self.act1(upE)
@@ -336,46 +269,83 @@ class SalsaNext(nn.Module):
         self.resBlock1,self.resBlock2,self.resBlock3, self.resBlock4, self.resBlock5,
         self.upBlock1, self.upBlock2, self.upBlock3, self.upBlock4]
 
-    def checkpoint_forward(self, x, chunk_length=3):
+    def checkpoint_forward(self, x, chunk_length=1):
         def custom(start, end):
             def custom_forward(*inputs):
-                x_ = inputs[0][0]
-                y_array = inputs[0][1]
+                x_ = inputs[0]
+                new_y_array = [[0]]
                 for ind, layer in enumerate(self.layers):
                     if start <= ind < end:
-                        if ind < 3:
+                        if 0<= ind < 3:
                             x_ = layer(x_)
-                        elif ind < 7:
+                        elif 3<=ind < 7:
                             x_, y_t = layer(x_)
-                            y_array.append(y_t)
+                            new_y_array.append(y_t)
                         elif ind == 7:
                             x_ = layer(x_)
-                        elif ind < 12:
-                            x_ = layer(x_, y_array[-1])
-                            y_array=y_array[:-1]
-                return x_, y_array
+
+                return (x_, *new_y_array)
             return custom_forward
+        def custom_decoder():
+            def custom_forward_decoder(*inputs):
+                x_ = inputs[0]
+                new_y_array = inputs[1:]
+                layers = self.layers[8:12]
+                for layer in layers:
+                    x_ = layer(x_, new_y_array[-1])
+                    new_y_array=new_y_array[:-1]
+                return x_
+            return custom_forward_decoder
 
         l = 0
-        num_layers = len(self.layers)
+        num_layers = 8
         hidden_states = x
+        
         y_array = []
+        tmp = torch.ones(1,dtype=torch.float32, requires_grad=True)
         while l < num_layers:
             end = l+chunk_length
             if end > num_layers:
                 end = num_layers
-            hidden_states, y_array = checkpoint(custom(l, end), [hidden_states, y_array])
+            final = checkpoint(custom(l, end), hidden_states.requires_grad_())
+            if len(final)==1:
+                hidden_states = final[0]
+            else:
+                hidden_states = final[0]
+                y_array_elems = final[2:]
+                y_array = [*y_array, *y_array_elems]
+
             l = end
+        for ind, elem in enumerate(y_array):
+            y_array[ind]=elem.requires_grad_()
+        hidden_states = checkpoint(custom_decoder(), hidden_states.requires_grad_(), *y_array)
         return hidden_states
 
     def forward(self, x):
         if self.deepspeed_checkpointing:
-            up1e = self.checkpoint_forward(x)
+            if False:
+                up1e = self.checkpoint_forward(x)
+
+                up1e = up1e.requires_grad_()
+            else:
+                downCntx = checkpoint(self.downCntx, x.requires_grad_())
+                downCntx = checkpoint(self.downCntx2,downCntx.requires_grad_())
+                downCntx = checkpoint(self.downCntx3,downCntx.requires_grad_())
+                down0c, down0b = checkpoint(self.resBlock1,downCntx.requires_grad_())
+                down1c, down1b = checkpoint(self.resBlock2,down0c.requires_grad_())
+                down2c, down2b = checkpoint(self.resBlock3,down1c.requires_grad_())
+                down3c, down3b = checkpoint(self.resBlock4,down2c.requires_grad_())
+                down5c = checkpoint(self.resBlock5,down3c.requires_grad_())
+
+                up4e = checkpoint(self.upBlock1,down5c.requires_grad_(),down3b.requires_grad_())
+                up3e = checkpoint(self.upBlock2,up4e.requires_grad_(), down2b.requires_grad_())
+                up2e = checkpoint(self.upBlock3,up3e.requires_grad_(), down1b.requires_grad_())
+                up1e = checkpoint(self.upBlock4,up2e.requires_grad_(), down0b.requires_grad_())
+                up1e = up1e.requires_grad_()
         else:
             downCntx = self.downCntx(x)
             downCntx = self.downCntx2(downCntx)
             downCntx = self.downCntx3(downCntx)
-
             down0c, down0b = self.resBlock1(downCntx)
             down1c, down1b = self.resBlock2(down0c)
             down2c, down2b = self.resBlock3(down1c)

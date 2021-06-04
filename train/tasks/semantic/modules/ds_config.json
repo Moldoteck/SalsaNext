@@ -1,27 +1,7 @@
 {
     "gradient_accumulation_steps": 1,
-    "train_micro_batch_size_per_gpu": 7,
-    "gradient_clipping": 1.0,
-    "zero_allow_untested_optimizer": true,
-    "zero_optimization": {
-        "stage": 3,
-        "reduce_bucket_size": 1e3,
-        "allgather_bucket_size": 1e3,
-        "stage3_max_live_parameters": 1e7,
-        "stage3_max_reuse_distance": 1e7,
-        "stage3_prefetch_bucket_size": 1e6,
-        "stage3_param_persistence_threshold": 1e5,
-        "contiguous_gradients": false,
-        "overlap_comm": false,
-        "offload_param": {
-            "device": "cpu",
-            "pin_memory": true
-        },
-        "offload_optimizer": {
-            "device": "cpu",
-            "pin_memory": true
-        }
-    },
+    "train_micro_batch_size_per_gpu": 6,
+    "steps_per_print":99999999,
     "activation_checkpointing": {
         "partition_activations": true,
         "contiguous_memory_optimization": false,
@@ -29,3 +9,31 @@
         "number_checkpoints": 1
     }
 }
+// ,
+//     "gradient_clipping": 1.0,
+//     "zero_allow_untested_optimizer": true,
+//     "zero_optimization": {
+//         "stage": 3,
+//         "reduce_bucket_size": 1e3,
+//         "allgather_bucket_size": 1e3,
+//         "stage3_max_live_parameters": 1e7,
+//         "stage3_max_reuse_distance": 1e7,
+//         "stage3_prefetch_bucket_size": 1e6,
+//         "stage3_param_persistence_threshold": 1e5,
+//         "contiguous_gradients": false,
+//         "overlap_comm": false,
+//         "offload_param": {
+//             "device": "cpu",
+//             "pin_memory": true
+//         },
+//         "offload_optimizer": {
+//             "device": "cpu",
+//             "pin_memory": true
+//         }
+//     },
+//     "activation_checkpointing": {
+//         "partition_activations": true,
+//         "contiguous_memory_optimization": false,
+//         "cpu_checkpointing": true,
+//         "number_checkpoints": 1
+//     }
