@@ -22,6 +22,8 @@ from common.warmupLR import *
 from tasks.semantic.modules.ioueval import *
 from tasks.semantic.modules.SalsaNext import *
 from tasks.semantic.modules.Lovasz_Softmax import Lovasz_softmax
+from tasks.semantic.modules.FocalTversky import FocalTversky
+from tasks.semantic.modules.LogCoshFocalTversky import LogCoshFocalTversky
 import tasks.semantic.modules.adf as adf
 
 def save_to_log(logdir, logfile, message):
@@ -107,7 +109,9 @@ class Trainer():
             self.gpu = True
 
         self.criterion = nn.NLLLoss(weight=self.loss_w).to(self.device)
-        self.ls = Lovasz_softmax(ignore=0).to(self.device)
+        # self.ls = Lovasz_softmax(ignore=0).to(self.device)
+        # self.ls2 = FocalTversky(ignore=0).to(self.device)
+        self.ls = LogCoshFocalTversky(ignore=0).to(self.device)
         # # loss as dataparallel too (more images in batch)
         self.optimizer = optim.SGD([{'params': self.model.parameters()}],
                                    lr=self.ARCH["train"]["lr"],
@@ -138,7 +142,7 @@ class Trainer():
         #     total_num_steps=self.ARCH["train"]["max_epochs"], 
         #     warmup_min_lr=final_decay, warmup_max_lr=self.ARCH["train"]["lr"], 
         #     warmup_num_steps=up_steps, last_batch_iteration=-1)
-
+        
         self.model, self.optimizer, _, self.scheduler = deepspeed.initialize(model=self.model, optimizer=self.optimizer, lr_scheduler=self.scheduler, model_parameters=[
                                                                              {'params': self.model.parameters()}], config='./modules/ds_config.json')
         deepspeed.checkpointing.configure(
@@ -335,10 +339,11 @@ class Trainer():
             output = self.model(in_vol)
 
             # compute loss
-            log_out = torch.log(output.clamp(min=1e-8))
+            # log_out = torch.log(output.clamp(min=1e-8))
             jacc = self.ls(output, proj_labels.long())
-            wce = criterion(log_out, proj_labels.long())
-            loss_m = wce + jacc
+            # wce = criterion(log_out, proj_labels.long())
+            # twe = self.ls2(output, proj_labels.long())
+            loss_m = jacc
             self.model.zero_grad()
             self.model.backward(loss_m)
 
@@ -433,10 +438,11 @@ class Trainer():
 
                 # compute output
                 output = self.model(in_vol)
-                log_out = torch.log(output.clamp(min=1e-8))
+                # log_out = torch.log(output.clamp(min=1e-8))
                 jacc = self.ls(output, proj_labels)
-                wce = criterion(log_out, proj_labels)
-                loss = wce + jacc
+                # wce = criterion(log_out, proj_labels)
+                # twe = self.ls2(output, proj_labels.long())
+                loss = jacc
 
                 # measure accuracy and record loss
                 argmax = output.argmax(dim=1)
@@ -444,7 +450,7 @@ class Trainer():
                 losses.update(loss.mean().item(), in_vol.size(0))
                 jaccs.update(jacc.mean().item(), in_vol.size(0))
 
-                wces.update(wce.mean().item(), in_vol.size(0))
+                # wces.update(twe.mean().item(), in_vol.size(0))
 
                 if save_scans:
                     # get the first scan in batch and project points

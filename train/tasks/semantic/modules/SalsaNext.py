@@ -200,22 +200,21 @@ class UpBlock(nn.Module):
 
         if self.deepspeed_checkpointing:
             upE = checkpoint(self.conv1, upB.requires_grad_())
-            upE = checkpoint(self.act1, upE.requires_grad_())
-            upE1 = checkpoint(self.bn1, upE.requires_grad_())
+            upE = checkpoint(self.act1, upE)
+            upE1 = checkpoint(self.bn1, upE)
 
-            upE = checkpoint(self.conv2, upE1.requires_grad_())
-            upE = checkpoint(self.act2, upE.requires_grad_())
-            upE2 = checkpoint(self.bn2, upE.requires_grad_())
+            upE = checkpoint(self.conv2, upE1)
+            upE = checkpoint(self.act2, upE)
+            upE2 = checkpoint(self.bn2, upE)
 
-            upE = checkpoint(self.conv3, upE2.requires_grad_())
-            upE = checkpoint(self.act3, upE.requires_grad_())
-            upE3 = checkpoint(self.bn3, upE.requires_grad_())
+            upE = checkpoint(self.conv3, upE2)
+            upE = checkpoint(self.act3, upE)
+            upE3 = checkpoint(self.bn3, upE)
 
-            concat = torch.cat((upE1.requires_grad_(),upE2.requires_grad_(),upE3.requires_grad_()),dim=1)
+            concat = torch.cat((upE1,upE2,upE3),dim=1)
             upE = checkpoint(self.conv4, concat.requires_grad_())
-            upE = checkpoint(self.act4, upE.requires_grad_())
-            upE = checkpoint(self.bn4, upE.requires_grad_())
-            upE = upE.requires_grad_()
+            upE = checkpoint(self.act4, upE)
+            upE = checkpoint(self.bn4, upE)
         else:
             upE = self.conv1(upB)
             upE = self.act1(upE)
@@ -307,7 +306,7 @@ class SalsaNext(nn.Module):
             end = l+chunk_length
             if end > num_layers:
                 end = num_layers
-            final = checkpoint(custom(l, end), hidden_states.requires_grad_())
+            final = checkpoint(custom(l, end), hidden_states)
             if len(final)==1:
                 hidden_states = final[0]
             else:
@@ -317,8 +316,8 @@ class SalsaNext(nn.Module):
 
             l = end
         for ind, elem in enumerate(y_array):
-            y_array[ind]=elem.requires_grad_()
-        hidden_states = checkpoint(custom_decoder(), hidden_states.requires_grad_(), *y_array)
+            y_array[ind]=elem
+        hidden_states = checkpoint(custom_decoder(), hidden_states, *y_array)
         return hidden_states
 
     def forward(self, x):
@@ -329,19 +328,19 @@ class SalsaNext(nn.Module):
                 up1e = up1e.requires_grad_()
             else:
                 downCntx = checkpoint(self.downCntx, x.requires_grad_())
-                downCntx = checkpoint(self.downCntx2,downCntx.requires_grad_())
-                downCntx = checkpoint(self.downCntx3,downCntx.requires_grad_())
-                down0c, down0b = checkpoint(self.resBlock1,downCntx.requires_grad_())
-                down1c, down1b = checkpoint(self.resBlock2,down0c.requires_grad_())
-                down2c, down2b = checkpoint(self.resBlock3,down1c.requires_grad_())
-                down3c, down3b = checkpoint(self.resBlock4,down2c.requires_grad_())
-                down5c = checkpoint(self.resBlock5,down3c.requires_grad_())
+                downCntx = checkpoint(self.downCntx2,downCntx)
+                downCntx = checkpoint(self.downCntx3,downCntx)
+                down0c, down0b = checkpoint(self.resBlock1,downCntx)
+                down1c, down1b = checkpoint(self.resBlock2,down0c)
+                down2c, down2b = checkpoint(self.resBlock3,down1c)
+                down3c, down3b = checkpoint(self.resBlock4,down2c)
+                down5c = checkpoint(self.resBlock5,down3c)
 
-                up4e = checkpoint(self.upBlock1,down5c.requires_grad_(),down3b.requires_grad_())
-                up3e = checkpoint(self.upBlock2,up4e.requires_grad_(), down2b.requires_grad_())
-                up2e = checkpoint(self.upBlock3,up3e.requires_grad_(), down1b.requires_grad_())
-                up1e = checkpoint(self.upBlock4,up2e.requires_grad_(), down0b.requires_grad_())
-                up1e = up1e.requires_grad_()
+                up4e = checkpoint(self.upBlock1,down5c,down3b)
+                up3e = checkpoint(self.upBlock2,up4e, down2b)
+                up2e = checkpoint(self.upBlock3,up3e, down1b)
+                up1e = checkpoint(self.upBlock4,up2e, down0b)
+                up1e = up1e
         else:
             downCntx = self.downCntx(x)
             downCntx = self.downCntx2(downCntx)
