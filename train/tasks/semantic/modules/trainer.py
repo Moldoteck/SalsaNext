@@ -109,9 +109,9 @@ class Trainer():
             self.gpu = True
 
         self.criterion = nn.NLLLoss(weight=self.loss_w).to(self.device)
-        # self.ls = Lovasz_softmax(ignore=0).to(self.device)
+        self.ls = Lovasz_softmax(ignore=0).to(self.device)
         # self.ls2 = FocalTversky(ignore=0).to(self.device)
-        self.ls = LogCoshFocalTversky(ignore=0).to(self.device)
+        # self.ls = LogCoshFocalTversky(ignore=0).to(self.device)
         # # loss as dataparallel too (more images in batch)
         self.optimizer = optim.SGD([{'params': self.model.parameters()}],
                                    lr=self.ARCH["train"]["lr"],
@@ -339,11 +339,11 @@ class Trainer():
             output = self.model(in_vol)
 
             # compute loss
-            # log_out = torch.log(output.clamp(min=1e-8))
+            log_out = torch.log(output.clamp(min=1e-8))
             jacc = self.ls(output, proj_labels.long())
-            # wce = criterion(log_out, proj_labels.long())
+            wce = criterion(log_out, proj_labels.long())
             # twe = self.ls2(output, proj_labels.long())
-            loss_m = jacc
+            loss_m = jacc+wce
             self.model.zero_grad()
             self.model.backward(loss_m)
 
@@ -438,11 +438,11 @@ class Trainer():
 
                 # compute output
                 output = self.model(in_vol)
-                # log_out = torch.log(output.clamp(min=1e-8))
+                log_out = torch.log(output.clamp(min=1e-8))
                 jacc = self.ls(output, proj_labels)
-                # wce = criterion(log_out, proj_labels)
+                wce = criterion(log_out, proj_labels)
                 # twe = self.ls2(output, proj_labels.long())
-                loss = jacc
+                loss = jacc+wce
 
                 # measure accuracy and record loss
                 argmax = output.argmax(dim=1)
@@ -450,7 +450,7 @@ class Trainer():
                 losses.update(loss.mean().item(), in_vol.size(0))
                 jaccs.update(jacc.mean().item(), in_vol.size(0))
 
-                # wces.update(twe.mean().item(), in_vol.size(0))
+                wces.update(twe.mean().item(), in_vol.size(0))
 
                 if save_scans:
                     # get the first scan in batch and project points
