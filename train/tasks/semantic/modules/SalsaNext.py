@@ -6,7 +6,7 @@ import __init__ as booger
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from involution import Involution2d
 import deepspeed
 
 
@@ -23,6 +23,8 @@ class ResContextBlock(nn.Module):
         self.act2 = nn.LeakyReLU()
         self.bn1 = nn.BatchNorm2d(out_filters)
 
+        # self.invo3 = Involution2d(in_channels=out_filters,out_channels= out_filters, sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),kernel_size=(3,3),stride=1, padding=(2,2), dilation=(2,2))
+        
         self.conv3 = nn.Conv2d(out_filters, out_filters, (3,3),dilation=2, padding=2)
         self.act3 = nn.LeakyReLU()
         self.bn2 = nn.BatchNorm2d(out_filters)
@@ -50,33 +52,50 @@ class ResContextBlock(nn.Module):
             resA = self.conv3(resA1)
             resA = self.act3(resA)
             resA2 = self.bn2(resA)
+            # resA2 = self.invo3(resA1)
         output = shortcut + resA2
         return output
 
 
 class ResBlock(nn.Module):
     def __init__(self, in_filters, out_filters, dropout_rate, kernel_size=(3, 3), stride=1,
-                 pooling=True, drop_out=True):
+                 pooling=True, drop_out=True, invol=False):
         super(ResBlock, self).__init__()
         global checkpoint
         checkpoint = deepspeed.checkpointing.checkpoint
+        self.invol = invol
         self.deepspeed_checkpointing = False
         self.pooling = pooling
         self.drop_out = drop_out
         self.conv1 = nn.Conv2d(in_filters, out_filters, kernel_size=(1, 1), stride=stride)
         self.act1 = nn.LeakyReLU()
 
-        self.conv2 = nn.Conv2d(in_filters, out_filters, kernel_size=(3,3), padding=1)
-        self.act2 = nn.LeakyReLU()
-        self.bn1 = nn.BatchNorm2d(out_filters)
+        if invol:
+            self.invo2 = Involution2d(in_filters,out_filters, 
+            sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
+            kernel_size=(3,3),stride=stride, padding=(1,1), dilation=(1,1))
+        else:
+            self.conv2 = nn.Conv2d(in_filters, out_filters, kernel_size=(3,3), padding=1)
+            self.act2 = nn.LeakyReLU()
+            self.bn1 = nn.BatchNorm2d(out_filters)
 
-        self.conv3 = nn.Conv2d(out_filters, out_filters, kernel_size=(3,3),dilation=2, padding=2)
-        self.act3 = nn.LeakyReLU()
-        self.bn2 = nn.BatchNorm2d(out_filters)
-
-        self.conv4 = nn.Conv2d(out_filters, out_filters, kernel_size=(2, 2), dilation=2, padding=1)
-        self.act4 = nn.LeakyReLU()
-        self.bn3 = nn.BatchNorm2d(out_filters)
+        if invol:
+            self.invo3 = Involution2d(out_filters, out_filters, 
+            sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
+            kernel_size=(3,3),stride=stride, padding=(2,2), dilation=(2,2))
+        else:
+            self.conv3 = nn.Conv2d(out_filters, out_filters, kernel_size=(3,3),dilation=2, padding=2)
+            self.act3 = nn.LeakyReLU()
+            self.bn2 = nn.BatchNorm2d(out_filters)
+        
+        if invol:
+            self.invo4 = Involution2d(out_filters,out_filters, 
+            sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
+            kernel_size=(2,2),stride=stride, padding=(1,1), dilation=(2,2))
+        else:
+            self.conv4 = nn.Conv2d(out_filters, out_filters, kernel_size=(2, 2), dilation=2, padding=1)
+            self.act4 = nn.LeakyReLU()
+            self.bn3 = nn.BatchNorm2d(out_filters)
 
         self.conv5 = nn.Conv2d(out_filters*3, out_filters, kernel_size=(1, 1))
         self.act5 = nn.LeakyReLU()
@@ -121,17 +140,23 @@ class ResBlock(nn.Module):
             shortcut = self.conv1(x)
             shortcut = self.act1(shortcut)
 
-            resA = self.conv2(x)
-            resA = self.act2(resA)
-            resA1 = self.bn1(resA)
+            
+            if self.invol:
+                resA1 = self.invo2(x)
+                resA2 = self.invo3(resA1)
+                resA3 = self.invo4(resA2)
+            else:
+                resA = self.conv2(x)
+                resA = self.act2(resA)
+                resA1 = self.bn1(resA)
 
-            resA = self.conv3(resA1)
-            resA = self.act3(resA)
-            resA2 = self.bn2(resA)
+                resA = self.conv3(resA1)
+                resA = self.act3(resA)
+                resA2 = self.bn2(resA)
 
-            resA = self.conv4(resA2)
-            resA = self.act4(resA)
-            resA3 = self.bn3(resA)
+                resA = self.conv4(resA2)
+                resA = self.act4(resA)
+                resA3 = self.bn3(resA)
 
             concat = torch.cat((resA1,resA2,resA3),dim=1)
             resA = self.conv5(concat)
@@ -157,10 +182,11 @@ class ResBlock(nn.Module):
 
 
 class UpBlock(nn.Module):
-    def __init__(self, in_filters, out_filters, dropout_rate, drop_out=True):
+    def __init__(self, in_filters, out_filters, dropout_rate, drop_out=True, invol=False):
         super(UpBlock, self).__init__()
         global checkpoint
         checkpoint = deepspeed.checkpointing.checkpoint
+        self.invol = invol
         self.deepspeed_checkpointing = False
         self.drop_out = drop_out
         self.in_filters = in_filters
@@ -174,14 +200,23 @@ class UpBlock(nn.Module):
         self.act1 = nn.LeakyReLU()
         self.bn1 = nn.BatchNorm2d(out_filters)
 
-        self.conv2 = nn.Conv2d(out_filters, out_filters, (3,3),dilation=2, padding=2)
-        self.act2 = nn.LeakyReLU()
-        self.bn2 = nn.BatchNorm2d(out_filters)
-
-        self.conv3 = nn.Conv2d(out_filters, out_filters, (2,2), dilation=2,padding=1)
-        self.act3 = nn.LeakyReLU()
-        self.bn3 = nn.BatchNorm2d(out_filters)
-
+        if invol:
+            self.invo2 = Involution2d(out_filters,out_filters, 
+            sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
+            kernel_size=(3,3),stride=1, padding=(2,2), dilation=(2,2))
+        else:
+            self.conv2 = nn.Conv2d(out_filters, out_filters, (3,3),dilation=2, padding=2)
+            self.act2 = nn.LeakyReLU()
+            self.bn2 = nn.BatchNorm2d(out_filters)
+        
+        if invol:
+            self.invo3 = Involution2d(out_filters,out_filters, 
+            sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
+            kernel_size=(2,2),stride=1, padding=(1,1), dilation=(2,2))
+        else:
+            self.conv3 = nn.Conv2d(out_filters, out_filters, (2,2), dilation=2,padding=1)
+            self.act3 = nn.LeakyReLU()
+            self.bn3 = nn.BatchNorm2d(out_filters)
 
         self.conv4 = nn.Conv2d(out_filters*3,out_filters,kernel_size=(1,1))
         self.act4 = nn.LeakyReLU()
@@ -200,33 +235,38 @@ class UpBlock(nn.Module):
 
         if self.deepspeed_checkpointing:
             upE = checkpoint(self.conv1, upB.requires_grad_())
-            upE = checkpoint(self.act1, upE)
-            upE1 = checkpoint(self.bn1, upE)
+            upE = checkpoint(self.act1, upE.requires_grad_())
+            upE1 = checkpoint(self.bn1, upE.requires_grad_())
 
-            upE = checkpoint(self.conv2, upE1)
-            upE = checkpoint(self.act2, upE)
-            upE2 = checkpoint(self.bn2, upE)
+            upE = checkpoint(self.conv2, upE1.requires_grad_())
+            upE = checkpoint(self.act2, upE.requires_grad_())
+            upE2 = checkpoint(self.bn2, upE.requires_grad_())
 
-            upE = checkpoint(self.conv3, upE2)
-            upE = checkpoint(self.act3, upE)
-            upE3 = checkpoint(self.bn3, upE)
+            upE = checkpoint(self.conv3, upE2.requires_grad_())
+            upE = checkpoint(self.act3, upE.requires_grad_())
+            upE3 = checkpoint(self.bn3, upE.requires_grad_())
 
-            concat = torch.cat((upE1,upE2,upE3),dim=1)
+            concat = torch.cat((upE1.requires_grad_(),upE2.requires_grad_(),upE3.requires_grad_()),dim=1)
             upE = checkpoint(self.conv4, concat.requires_grad_())
-            upE = checkpoint(self.act4, upE)
-            upE = checkpoint(self.bn4, upE)
+            upE = checkpoint(self.act4, upE.requires_grad_())
+            upE = checkpoint(self.bn4, upE.requires_grad_())
+            upE = upE.requires_grad_()
         else:
             upE = self.conv1(upB)
             upE = self.act1(upE)
             upE1 = self.bn1(upE)
 
-            upE = self.conv2(upE1)
-            upE = self.act2(upE)
-            upE2 = self.bn2(upE)
+            if self.invol:
+                upE2 = self.invo2(upE1)
+                upE3 = self.invo3(upE2)
+            else:
+                upE = self.conv2(upE1)
+                upE = self.act2(upE)
+                upE2 = self.bn2(upE)
 
-            upE = self.conv3(upE2)
-            upE = self.act3(upE)
-            upE3 = self.bn3(upE)
+                upE = self.conv3(upE2)
+                upE = self.act3(upE)
+                upE3 = self.bn3(upE)
 
             concat = torch.cat((upE1,upE2,upE3),dim=1)
             upE = self.conv4(concat)
@@ -253,11 +293,11 @@ class SalsaNext(nn.Module):
         self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False)
         self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True)
         self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True)
-        self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True)
-        self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False)
+        self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=True)
+        self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False, invol=True)
 
-        self.upBlock1 = UpBlock(2 * 4 * 32, 4 * 32, 0.2)
-        self.upBlock2 = UpBlock(4 * 32, 4 * 32, 0.2)
+        self.upBlock1 = UpBlock(2 * 4 * 32, 4 * 32, 0.2, invol=True)
+        self.upBlock2 = UpBlock(4 * 32, 4 * 32, 0.2, invol=True)
         self.upBlock3 = UpBlock(4 * 32, 2 * 32, 0.2)
         self.upBlock4 = UpBlock(2 * 32, 32, 0.2, drop_out=False)
 
@@ -306,7 +346,7 @@ class SalsaNext(nn.Module):
             end = l+chunk_length
             if end > num_layers:
                 end = num_layers
-            final = checkpoint(custom(l, end), hidden_states)
+            final = checkpoint(custom(l, end), hidden_states.requires_grad_())
             if len(final)==1:
                 hidden_states = final[0]
             else:
@@ -316,8 +356,8 @@ class SalsaNext(nn.Module):
 
             l = end
         for ind, elem in enumerate(y_array):
-            y_array[ind]=elem
-        hidden_states = checkpoint(custom_decoder(), hidden_states, *y_array)
+            y_array[ind]=elem.requires_grad_()
+        hidden_states = checkpoint(custom_decoder(), hidden_states.requires_grad_(), *y_array)
         return hidden_states
 
     def forward(self, x):
@@ -328,19 +368,19 @@ class SalsaNext(nn.Module):
                 up1e = up1e.requires_grad_()
             else:
                 downCntx = checkpoint(self.downCntx, x.requires_grad_())
-                downCntx = checkpoint(self.downCntx2,downCntx)
-                downCntx = checkpoint(self.downCntx3,downCntx)
-                down0c, down0b = checkpoint(self.resBlock1,downCntx)
-                down1c, down1b = checkpoint(self.resBlock2,down0c)
-                down2c, down2b = checkpoint(self.resBlock3,down1c)
-                down3c, down3b = checkpoint(self.resBlock4,down2c)
-                down5c = checkpoint(self.resBlock5,down3c)
+                downCntx = checkpoint(self.downCntx2,downCntx.requires_grad_())
+                downCntx = checkpoint(self.downCntx3,downCntx.requires_grad_())
+                down0c, down0b = checkpoint(self.resBlock1,downCntx.requires_grad_())
+                down1c, down1b = checkpoint(self.resBlock2,down0c.requires_grad_())
+                down2c, down2b = checkpoint(self.resBlock3,down1c.requires_grad_())
+                down3c, down3b = checkpoint(self.resBlock4,down2c.requires_grad_())
+                down5c = checkpoint(self.resBlock5,down3c.requires_grad_())
 
-                up4e = checkpoint(self.upBlock1,down5c,down3b)
-                up3e = checkpoint(self.upBlock2,up4e, down2b)
-                up2e = checkpoint(self.upBlock3,up3e, down1b)
-                up1e = checkpoint(self.upBlock4,up2e, down0b)
-                up1e = up1e
+                up4e = checkpoint(self.upBlock1,down5c.requires_grad_(),down3b.requires_grad_())
+                up3e = checkpoint(self.upBlock2,up4e.requires_grad_(), down2b.requires_grad_())
+                up2e = checkpoint(self.upBlock3,up3e.requires_grad_(), down1b.requires_grad_())
+                up1e = checkpoint(self.upBlock4,up2e.requires_grad_(), down0b.requires_grad_())
+                up1e = up1e.requires_grad_()
         else:
             downCntx = self.downCntx(x)
             downCntx = self.downCntx2(downCntx)
