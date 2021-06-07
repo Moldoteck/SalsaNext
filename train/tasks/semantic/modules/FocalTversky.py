@@ -35,20 +35,15 @@ def mean(l, ignore_nan=False, empty=0):
     return acc / n
 
 
-def tversky(y_true, y_pred):
-    # y_true_pos = torch.flatten(y_true)
-    # y_pred_pos = torch.flatten(y_pred)
-    y_true_pos = y_true
-    y_pred_pos = y_pred
-    true_pos = torch.sum(y_true_pos * y_pred_pos)
-    false_neg = torch.sum(y_true_pos * (1-y_pred_pos))
-    false_pos = torch.sum((1-y_true_pos)*y_pred_pos)
-    alpha = 0.7
-    return (true_pos + 1)/(true_pos + alpha*false_neg + (1-alpha)*false_pos + 1)
+def tversky(pred, ground, alpha=0.7):
+    true_pos = torch.sum(ground*pred)
+    false_neg = torch.sum(ground*(1-pred))
+    false_pos = torch.sum(pred*(1-ground))
+    beta = 1-alpha
+    return (true_pos + 1)/(true_pos + alpha*false_neg + beta*false_pos + 1)
 
-def focal_tversky(y_true,y_pred):
-    pt_1 = tversky(y_true, y_pred)
-    gamma = 0.75
+def focal_tversky(pred, ground, gamma=0.75, alpha=0.7):
+    pt_1 = tversky(pred, ground, alpha)
     return torch.pow((1-pt_1), gamma)
 
 
@@ -89,7 +84,7 @@ def focal_tversky_flat(probas, labels, classes='present'):
             class_pred = probas[:, 0]
         else:
             class_pred = probas[:, c]
-        losses.append(focal_tversky(Variable(fg),class_pred))
+        losses.append(focal_tversky(class_pred, Variable(fg)))
     return mean(losses)
 
 
