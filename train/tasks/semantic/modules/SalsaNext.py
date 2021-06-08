@@ -24,6 +24,8 @@ class ResContextBlock(nn.Module):
             self.invo2 = Involution2d(out_filters, out_filters, 
             sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
             kernel_size=(3,3),stride=1, padding=(1,1), dilation=(1,1))
+            self.act2 = nn.LeakyReLU()
+            self.bn1 = nn.BatchNorm2d(out_filters)
         else:
             self.conv2 = nn.Conv2d(out_filters, out_filters, (3,3), padding=1)
             self.act2 = nn.LeakyReLU()
@@ -33,6 +35,8 @@ class ResContextBlock(nn.Module):
             self.invo3 = Involution2d(out_filters, out_filters, 
             sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
             kernel_size=(3,3),stride=1, padding=(2,2), dilation=(2,2))
+            self.act3 = nn.LeakyReLU()
+            self.bn2 = nn.BatchNorm2d(out_filters)
         else:
             self.conv3 = nn.Conv2d(out_filters, out_filters, (3,3),dilation=2, padding=2)
             self.act3 = nn.LeakyReLU()
@@ -55,8 +59,12 @@ class ResContextBlock(nn.Module):
             shortcut = self.act1(shortcut)
 
             if self.invol:
-                resA1 = self.invo2(shortcut)
-                resA2 = self.invo3(resA1)
+                resA = self.invo2(shortcut)
+                resA = self.act2(resA)
+                resA1 = self.bn1(resA)
+                resA = self.invo3(resA1)
+                resA = self.act3(resA)
+                resA2 = self.bn2(resA)
             else:
                 resA = self.conv2(shortcut)
                 resA = self.act2(resA)
