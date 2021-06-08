@@ -336,6 +336,7 @@ class Trainer():
                 proj_labels = proj_labels.cuda(non_blocking=True).long()
 
             # compute output
+            self.model.zero_grad()
             output = self.model(in_vol)
 
             # compute loss
@@ -343,8 +344,7 @@ class Trainer():
             jacc = self.ls(output, proj_labels.long())
             wce = criterion(log_out, proj_labels.long())
             # twe = self.ls2(output, proj_labels.long())
-            loss_m = jacc+wce
-            self.model.zero_grad()
+            loss_m = jacc + wce
             self.model.backward(loss_m)
 
             # measure accuracy and record loss
@@ -450,7 +450,7 @@ class Trainer():
                 losses.update(loss.mean().item(), in_vol.size(0))
                 jaccs.update(jacc.mean().item(), in_vol.size(0))
 
-                wces.update(twe.mean().item(), in_vol.size(0))
+                wces.update(wce.mean().item(), in_vol.size(0))
 
                 if save_scans:
                     # get the first scan in batch and project points
