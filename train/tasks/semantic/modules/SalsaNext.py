@@ -96,8 +96,8 @@ class ResBlock(nn.Module):
             kernel_size=(3,3),stride=stride, padding=(1,1), dilation=(1,1))
         else:
             self.conv2 = nn.Conv2d(in_filters, out_filters, kernel_size=(3,3), padding=1)
-            self.act2 = nn.LeakyReLU()
-            self.bn1 = nn.BatchNorm2d(out_filters)
+        self.act2 = nn.LeakyReLU()
+        self.bn1 = nn.BatchNorm2d(out_filters)
 
         if invol:
             self.invo3 = Involution2d(out_filters, out_filters, 
@@ -105,8 +105,8 @@ class ResBlock(nn.Module):
             kernel_size=(3,3),stride=stride, padding=(2,2), dilation=(2,2))
         else:
             self.conv3 = nn.Conv2d(out_filters, out_filters, kernel_size=(3,3),dilation=2, padding=2)
-            self.act3 = nn.LeakyReLU()
-            self.bn2 = nn.BatchNorm2d(out_filters)
+        self.act3 = nn.LeakyReLU()
+        self.bn2 = nn.BatchNorm2d(out_filters)
         
         if invol:
             self.invo4 = Involution2d(out_filters,out_filters, 
@@ -114,8 +114,8 @@ class ResBlock(nn.Module):
             kernel_size=(2,2),stride=stride, padding=(1,1), dilation=(2,2))
         else:
             self.conv4 = nn.Conv2d(out_filters, out_filters, kernel_size=(2, 2), dilation=2, padding=1)
-            self.act4 = nn.LeakyReLU()
-            self.bn3 = nn.BatchNorm2d(out_filters)
+        self.act4 = nn.LeakyReLU()
+        self.bn3 = nn.BatchNorm2d(out_filters)
 
         self.conv5 = nn.Conv2d(out_filters*3, out_filters, kernel_size=(1, 1))
         self.act5 = nn.LeakyReLU()
@@ -159,12 +159,19 @@ class ResBlock(nn.Module):
         else:
             shortcut = self.conv1(x)
             shortcut = self.act1(shortcut)
-
             
             if self.invol:
-                resA1 = self.invo2(x)
-                resA2 = self.invo3(resA1)
-                resA3 = self.invo4(resA2)
+                resA = self.invo2(x)
+                resA = self.act2(resA)
+                resA1 = self.bn1(resA)
+
+                resA = self.invo3(resA1)
+                resA = self.act3(resA)
+                resA2 = self.bn2(resA)
+
+                resA = self.invo4(resA2)
+                resA = self.act4(resA)
+                resA3 = self.bn3(resA)
             else:
                 resA = self.conv2(x)
                 resA = self.act2(resA)
@@ -216,7 +223,12 @@ class UpBlock(nn.Module):
 
         self.dropout2 = nn.Dropout2d(p=dropout_rate)
 
-        self.conv1 = nn.Conv2d(in_filters//4 + 2*out_filters, out_filters, (3,3), padding=1)
+        if invol:
+            self.invo1 = Involution2d(in_filters//4 + 2*out_filters, out_filters, 
+            sigma_mapping = nn.Sequential(nn.LeakyReLU(), nn.BatchNorm2d(out_filters)),
+            kernel_size=(3,3),stride=1, padding=(1,1), dilation=(1,1))
+        else:
+            self.conv1 = nn.Conv2d(in_filters//4 + 2*out_filters, out_filters, (3,3), padding=1)
         self.act1 = nn.LeakyReLU()
         self.bn1 = nn.BatchNorm2d(out_filters)
 
@@ -226,8 +238,8 @@ class UpBlock(nn.Module):
             kernel_size=(3,3),stride=1, padding=(2,2), dilation=(2,2))
         else:
             self.conv2 = nn.Conv2d(out_filters, out_filters, (3,3),dilation=2, padding=2)
-            self.act2 = nn.LeakyReLU()
-            self.bn2 = nn.BatchNorm2d(out_filters)
+        self.act2 = nn.LeakyReLU()
+        self.bn2 = nn.BatchNorm2d(out_filters)
         
         if invol:
             self.invo3 = Involution2d(out_filters,out_filters, 
@@ -235,8 +247,8 @@ class UpBlock(nn.Module):
             kernel_size=(2,2),stride=1, padding=(1,1), dilation=(2,2))
         else:
             self.conv3 = nn.Conv2d(out_filters, out_filters, (2,2), dilation=2,padding=1)
-            self.act3 = nn.LeakyReLU()
-            self.bn3 = nn.BatchNorm2d(out_filters)
+        self.act3 = nn.LeakyReLU()
+        self.bn3 = nn.BatchNorm2d(out_filters)
 
         self.conv4 = nn.Conv2d(out_filters*3,out_filters,kernel_size=(1,1))
         self.act4 = nn.LeakyReLU()
@@ -272,14 +284,24 @@ class UpBlock(nn.Module):
             upE = checkpoint(self.bn4, upE.requires_grad_())
             upE = upE.requires_grad_()
         else:
-            upE = self.conv1(upB)
-            upE = self.act1(upE)
-            upE1 = self.bn1(upE)
-
+            
             if self.invol:
-                upE2 = self.invo2(upE1)
-                upE3 = self.invo3(upE2)
+                upE = self.invo1(upB)
+                upE = self.act1(upE)
+                upE1 = self.bn1(upE)
+
+                upE = self.invo2(upE1)
+                upE = self.act2(upE)
+                upE2 = self.bn2(upE)
+
+                upE = self.invo3(upE2)
+                upE = self.act3(upE)
+                upE3 = self.bn3(upE)
             else:
+                upE = self.conv1(upB)
+                upE = self.act1(upE)
+                upE1 = self.bn1(upE)
+
                 upE = self.conv2(upE1)
                 upE = self.act2(upE)
                 upE2 = self.bn2(upE)
@@ -306,15 +328,15 @@ class SalsaNext(nn.Module):
         self.nclasses = nclasses
         self.deepspeed_checkpointing = True
 
-        self.downCntx = ResContextBlock(5, 32, invol=True)
-        self.downCntx2 = ResContextBlock(32, 32, invol=True)
-        self.downCntx3 = ResContextBlock(32, 32, invol=True)
+        self.downCntx = ResContextBlock(5, 32)
+        self.downCntx2 = ResContextBlock(32, 32)
+        self.downCntx3 = ResContextBlock(32, 32)
 
-        self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False)
-        self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True)
-        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True)
-        self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True)
-        self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False)
+        self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=True)
+        self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True, invol=True)
+        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=True)
+        self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=True)
+        self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False, invol=True)
 
         self.upBlock1 = UpBlock(2 * 4 * 32, 4 * 32, 0.2)
         self.upBlock2 = UpBlock(4 * 32, 4 * 32, 0.2)
