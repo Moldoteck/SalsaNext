@@ -332,16 +332,16 @@ class SalsaNext(nn.Module):
         self.downCntx2 = ResContextBlock(32, 32)
         self.downCntx3 = ResContextBlock(32, 32)
 
-        self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=False)
-        self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True, invol=False)
-        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=False)
+        self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=True)
+        self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True, invol=True)
+        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=True)
         self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=False)
         self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False, invol=False)
 
-        self.upBlock1 = UpBlock(2 * 4 * 32, 4 * 32, 0.2, invol=True)
-        self.upBlock2 = UpBlock(4 * 32, 4 * 32, 0.2, invol=True)
-        self.upBlock3 = UpBlock(4 * 32, 2 * 32, 0.2, invol=True)
-        self.upBlock4 = UpBlock(2 * 32, 32, 0.2, drop_out=False, invol=True)
+        self.upBlock1 = UpBlock(2 * 4 * 32, 4 * 32, 0.2, invol=False)
+        self.upBlock2 = UpBlock(4 * 32, 4 * 32, 0.2, invol=False)
+        self.upBlock3 = UpBlock(4 * 32, 2 * 32, 0.2, invol=False)
+        self.upBlock4 = UpBlock(2 * 32, 32, 0.2, drop_out=False, invol=False)
 
         self.logits = nn.Conv2d(32, nclasses, kernel_size=(1, 1))
 
