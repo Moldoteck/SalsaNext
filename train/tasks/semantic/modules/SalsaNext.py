@@ -328,13 +328,13 @@ class SalsaNext(nn.Module):
         self.nclasses = nclasses
         self.deepspeed_checkpointing = True
 
-        self.downCntx = ResContextBlock(5, 32)
+        self.downCntx = ResContextBlock(5, 32, invol=True)
         self.downCntx2 = ResContextBlock(32, 32)
         self.downCntx3 = ResContextBlock(32, 32)
 
-        self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=True)
-        self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True, invol=True)
-        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=True)
+        self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=False)
+        self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True, invol=False)
+        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=Falses)
         self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=False)
         self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False, invol=False)
 
