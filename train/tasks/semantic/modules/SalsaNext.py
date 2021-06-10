@@ -334,7 +334,7 @@ class SalsaNext(nn.Module):
 
         self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=False)
         self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True, invol=False)
-        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=Falses)
+        self.resBlock3 = ResBlock(2 * 2 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=False)
         self.resBlock4 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=True, invol=False)
         self.resBlock5 = ResBlock(2 * 4 * 32, 2 * 4 * 32, 0.2, pooling=False, invol=False)
 
