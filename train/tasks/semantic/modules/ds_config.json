@@ -1,6 +1,6 @@
 {
     "gradient_accumulation_steps": 1,
-    "train_micro_batch_size_per_gpu": 3,
+    "train_micro_batch_size_per_gpu": 12,
     "zero_allow_untested_optimizer":true,
     "steps_per_print":99999999,
     "activation_checkpointing": {

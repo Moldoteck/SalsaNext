@@ -110,7 +110,7 @@ class Trainer():
 
         self.criterion = nn.NLLLoss(weight=self.loss_w).to(self.device)
         self.ls = Lovasz_softmax(ignore=0).to(self.device)
-        # self.ls2 = FocalTversky(ignore=0).to(self.device)
+        self.ls2 = FocalTversky(ignore=0).to(self.device)
         # self.ls = LogCoshFocalTversky(ignore=0).to(self.device)
         # # loss as dataparallel too (more images in batch)
         self.optimizer = optim.SGD([{'params': self.model.parameters()}],
@@ -324,7 +324,7 @@ class Trainer():
             torch.cuda.empty_cache()
 
         # switch to train mode
-        # model.train()
+        self.model.train()
 
         end = time.time()
         for i, (in_vol, proj_mask, proj_labels, _, path_seq, path_name, _, _, _, _, _, _, _, _, _) in enumerate(train_loader):
@@ -342,8 +342,8 @@ class Trainer():
             log_out = torch.log(output.clamp(min=1e-8))
             jacc = self.ls(output, proj_labels.long())
             wce = criterion(log_out, proj_labels.long())
-            # twe = self.ls2(output, proj_labels.long())
-            loss_m = jacc+wce
+            twe = self.ls2(output, proj_labels.long())
+            loss_m = jacc+wce+twe
             self.model.zero_grad()
             self.model.backward(loss_m)
 
@@ -441,8 +441,8 @@ class Trainer():
                 log_out = torch.log(output.clamp(min=1e-8))
                 jacc = self.ls(output, proj_labels)
                 wce = criterion(log_out, proj_labels)
-                # twe = self.ls2(output, proj_labels.long())
-                loss = jacc+wce
+                twe = self.ls2(output, proj_labels.long())
+                loss = jacc+wce+twe
 
                 # measure accuracy and record loss
                 argmax = output.argmax(dim=1)
