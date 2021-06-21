@@ -422,7 +422,7 @@ class SalsaNext(nn.Module):
                 up3e = checkpoint(self.upBlock2,up4e, down2b)
                 up2e = checkpoint(self.upBlock3,up3e, down1b)
                 up1e = checkpoint(self.upBlock4,up2e, down0b)
-                up1e = up1e.requires_grad_()
+                # up1e = up1e.requires_grad_()
         else:
             downCntx = self.downCntx(x)
             downCntx = self.downCntx2(downCntx)
