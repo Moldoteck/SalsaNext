@@ -328,8 +328,8 @@ class SalsaNext(nn.Module):
         self.nclasses = nclasses
         self.deepspeed_checkpointing = True
 
-        self.downCntx = ResContextBlock(5, 32, invol=True)
-        self.downCntx2 = ResContextBlock(32, 32, invol=True)
+        self.downCntx = ResContextBlock(5, 32, invol=False)
+        self.downCntx2 = ResContextBlock(32, 32, invol=False)
         self.downCntx3 = ResContextBlock(32, 32, invol=True)
 
         self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=False)
@@ -410,18 +410,18 @@ class SalsaNext(nn.Module):
                 up1e = up1e.requires_grad_()
             else:
                 downCntx = checkpoint(self.downCntx, x.requires_grad_())
-                downCntx = checkpoint(self.downCntx2,downCntx.requires_grad_())
-                downCntx = checkpoint(self.downCntx3,downCntx.requires_grad_())
-                down0c, down0b = checkpoint(self.resBlock1,downCntx.requires_grad_())
-                down1c, down1b = checkpoint(self.resBlock2,down0c.requires_grad_())
-                down2c, down2b = checkpoint(self.resBlock3,down1c.requires_grad_())
-                down3c, down3b = checkpoint(self.resBlock4,down2c.requires_grad_())
-                down5c = checkpoint(self.resBlock5,down3c.requires_grad_())
+                downCntx = checkpoint(self.downCntx2,downCntx)
+                downCntx = checkpoint(self.downCntx3,downCntx)
+                down0c, down0b = checkpoint(self.resBlock1,downCntx)
+                down1c, down1b = checkpoint(self.resBlock2,down0c)
+                down2c, down2b = checkpoint(self.resBlock3,down1c)
+                down3c, down3b = checkpoint(self.resBlock4,down2c)
+                down5c = checkpoint(self.resBlock5,down3c)
 
-                up4e = checkpoint(self.upBlock1,down5c.requires_grad_(),down3b.requires_grad_())
-                up3e = checkpoint(self.upBlock2,up4e.requires_grad_(), down2b.requires_grad_())
-                up2e = checkpoint(self.upBlock3,up3e.requires_grad_(), down1b.requires_grad_())
-                up1e = checkpoint(self.upBlock4,up2e.requires_grad_(), down0b.requires_grad_())
+                up4e = checkpoint(self.upBlock1,down5c,down3b)
+                up3e = checkpoint(self.upBlock2,up4e, down2b)
+                up2e = checkpoint(self.upBlock3,up3e, down1b)
+                up1e = checkpoint(self.upBlock4,up2e, down0b)
                 up1e = up1e.requires_grad_()
         else:
             downCntx = self.downCntx(x)
