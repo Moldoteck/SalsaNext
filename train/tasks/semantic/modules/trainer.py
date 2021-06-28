@@ -343,8 +343,8 @@ class Trainer():
             log_out = torch.log(output.clamp(min=1e-8))
             jacc = self.ls(output, proj_labels.long())
             wce = criterion(log_out, proj_labels.long())
-            # twe = self.ls2(output, proj_labels.long())
-            loss_m = jacc + wce 
+            twe = self.ls2(output, proj_labels.long())
+            loss_m = jacc + wce + twe
             self.model.backward(loss_m)
 
             # measure accuracy and record loss
@@ -441,8 +441,8 @@ class Trainer():
                 log_out = torch.log(output.clamp(min=1e-8))
                 jacc = self.ls(output, proj_labels)
                 wce = criterion(log_out, proj_labels)
-                # twe = self.ls2(output, proj_labels.long())
-                loss = jacc + wce
+                twe = self.ls2(output, proj_labels.long())
+                loss = jacc + wce + twe
 
                 # measure accuracy and record loss
                 argmax = output.argmax(dim=1)
