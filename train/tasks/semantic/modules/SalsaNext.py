@@ -330,7 +330,7 @@ class SalsaNext(nn.Module):
 
         self.downCntx = ResContextBlock(5, 32, invol=False)
         self.downCntx2 = ResContextBlock(32, 32, invol=False)
-        self.downCntx3 = ResContextBlock(32, 32, invol=False)
+        self.downCntx3 = ResContextBlock(32, 32, invol=True)
 
         self.resBlock1 = ResBlock(32, 2 * 32, 0.2, pooling=True, drop_out=False, invol=False)
         self.resBlock2 = ResBlock(2 * 32, 2 * 2 * 32, 0.2, pooling=True, invol=False)
